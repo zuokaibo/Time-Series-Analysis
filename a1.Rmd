@@ -124,7 +124,8 @@ lines(t.fit.gam,lwd=2,col="red")
 all = c(time.data.fit.mav, t.fit.lm, t.fit.gam, t.fit.loc)
 ylim= c(min(all),max(all))
 time.data = ts(time.data, start=2010, frequency = 12)
-ts.plot(t.fit.lm,lwd=2,col="green",ylim=ylim)
+ts.plot(time.data)
+lines(t.fit.lm,lwd=2,col="green",ylim=ylim)
 lines(time.data.fit.mav,lwd=2,col="purple")
 lines(t.fit.gam,lwd=2,col="red")
 lines(t.fit.loc,lwd=2,col="brown")
@@ -146,23 +147,76 @@ Evaluate the quality of each fit using the residual analysis.
 # remove trend and seasonality
 Close.tr = sqrt(data$Close+3/8)
 resid = Close.tr - fitted(gam.fit)
-
 acf(resid,lag.max=12*4,main="",col="brown")
+
+# ma
+diff.moving = ts(time.data - time.data.fit.mav, start = 2010, frequency = 12)
+ts.plot(diff.moving, ylab= "moving average residual process")
+acf(diff.moving)
+
+# paramatic 
+diff.para = tsdiff.moving = ts(time.data - t.fit.lm, start = 2010, frequency = 12)
+ts.plot(diff.para, ylab= "paramatric Polynomial residual process")
+acf(diff.para)
+
+#Local
+diff.loc = ts(time.data - t.fit.loc, start = 2010, frequency = 12)
+ts.plot(diff.loc, ylab= "local Polynomial residual process")
+acf(diff.loc)
+
+#spline
+diff.spline = ts(time.data - t.fit.gam, start = 2010, frequency = 12)
+ts.plot(diff.loc, ylab= "spline Polynomial residual process")
+acf(diff.spline)
 
 ```
 **Response:1c**
-autocorrelation in the plot at different lags is decreasing, indicating that the residuals are not behaving like white noise and that the model may need adjustments. The ACF of residuals shows a quick decreasing towards zero, indicating no significant autocorrelation at any lag, signifying a well-fitted model. 
+moving trend and seasonality: autocorrelation in the plot at different lags is decreasing, indicating that the residuals are not behaving like white noise and that the model may need adjustments. The ACF of residuals shows a quick decreasing towards zero, indicating no significant autocorrelation at any lag, signifying a well-fitted model. 
 
+Moving average: the residual plot does not show spikes, indicating a finite variance. ACF plot does not decay to zero indicating no violation of the constant mean. So it is non-stationary.
+
+Paramatric: the residual plot does not show spikes, indicating a finite variance. ACF plot does not decay to zero indicating no violation of the constant mean. So it is non-stationary.
+
+Local polynomial: the residual plot does not show spikes, indicating a finite variance.but ACF plot shows a trend of decay to zero and then back to zero, which means the residuals still have some seasonality, which means it is non-stationary. 
+
+Splines: the residual plot does not show spikes, indicating a finite variance. The ACF plot does not decay to zero and have a pattern indicating a seasonality, implying non-stationary.
 
 ## Question 1d: Differenced Data Modeling
 
 Now plot the difference time series and its ACF plot. Apply the four trend models in Question 1b to the differenced time series. What can you conclude about the difference data in terms of stationarity? Which model would you recommend to apply (trend removal via fitting trend vs differencing) such that to obtain a stationary process?
 
 ```{r}
+# reference:https://www.google.com/search?q=plot+the+difference+time+series+and+its+ACF+plot+in+r&oq=plot+the+difference+time+series+and+its+ACF+plot+in+r&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIHCAEQIRigATIHCAIQIRigATIHCAMQIRigATIHCAQQIRigATIHCAUQIRiPAjIHCAYQIRiPAjIHCAcQIRiPAtIBCDQ0NTNqMGo3qAIIsAIB&sourceid=chrome&ie=UTF-8#cobssid=s
+
+diff.data = diff(time.data)
+
+plot(diff.data)
+acf(diff.data)
+
+diff.pts = c(1:length(diff.data))
+diff.pts = c(ma.pts - min(diff.pts))/max(diff.pts)
+
+# moving average
+diff.fit = ksmooth(diff.pts, diff.data, kernel = "box")
+diff.data.fit.mav = ts(diff.fit$y,start=2010,frequency=12)
+diff.fit
+
+#  Parametric quadratic polynomial
+diff.x1 = diff.pts
+diff.x2 = diff.pts^2
+diff.lm.fit = lm(data$Close~diff.x1+diff.x2)
+summary(diff.lm.fit)
+#diff.fit.lm = ts(fitted(diff.lm.fit),start=2010,frequency=12)
+#ts.plot(diff.data,ylab="Close")
+#lines(diff.fit.lm,lwd=2,col="green")
 
 ```
 
 **Response 1d**
+
+
+
+
 
 
 # Part 2: Temperature Analysis
