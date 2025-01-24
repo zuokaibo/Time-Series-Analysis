@@ -132,7 +132,6 @@ legend(x=1900,y=64,legend=c("MAV","LM","GAM","LOESS"),lty = 1, col=c("purple","g
 
 ```
 
-
 **Response: 1b**
 Splines Trend Estimation is the most proper trend estimation line. 
 
@@ -143,10 +142,16 @@ Splines Trend Estimation is the most proper trend estimation line.
 Evaluate the quality of each fit using the residual analysis.
 
 ```{r}
+# reference: lecture notes
+# remove trend and seasonality
+Close.tr = sqrt(data$Close+3/8)
+resid = Close.tr - fitted(gam.fit)
 
+acf(resid,lag.max=12*4,main="",col="brown")
 
 ```
 **Response:1c**
+autocorrelation in the plot at different lags is decreasing, indicating that the residuals are not behaving like white noise and that the model may need adjustments. The ACF of residuals shows a quick decreasing towards zero, indicating no significant autocorrelation at any lag, signifying a well-fitted model. 
 
 
 ## Question 1d: Differenced Data Modeling
