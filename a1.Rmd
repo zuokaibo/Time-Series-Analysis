@@ -1,0 +1,247 @@
+---
+title: "ISYE 6402 Homework Spring 2024"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Part 1: EXT FUNDS Gold Price Exchange Analysis
+
+# Background
+
+In this problem, we will study fluctuations in The NEXT FUNDS Gold Price Exchange Traded Fund that is a type of investment fund that aims to track the performance of gold prices. By investing in this fund, investors can gain exposure to the price movements of gold without having to physically own the metal. The fund holds physical gold as its underlying asset, and its value is based on the market price of gold.
+You will use the file Fund Prices Data.csv, where monthly prices are from January 2010 to Dec 2022.
+
+
+## Instructions on reading the data
+
+To read the data in R, save the file in your working directory (make sure you have changed the directory if different from the R working directory) and read the data using the R function read.csv()
+
+You will perform the analysis and modelling on the Close data column.
+
+```{r, warning=FALSE, message=FALSE}
+
+#Here are the libraries you will need:
+
+library(mgcv)
+library(TSA)
+library(dynlm)
+library(ggplot2)
+library(reshape2)
+library(greybox)
+library(mlr)
+library(mgcv)
+library(lubridate)
+library(dplyr)
+library(data.table)
+library(forecast)
+
+```
+
+```{r}
+#Run the following code to prepare the data for analysis:
+
+data<-read.csv("Fund Prices Data.csv")
+
+```
+
+## Question 1a: Exploratory Data Analysis 
+
+Plot the Time Series and the ACF plot for the series. Comment on the stationarity of both time series based on these plots. Which (if any) stationarity assumptions are violated for the time series?
+
+```{r}
+# use View() and str() to check date type and it was char, then use mdy() from lubridate package convert char date to Date type, then re-check data by View() and str()
+
+data$Date = mdy(data$Date)
+#View(data)
+#str(data)
+
+```
+
+
+```{r}
+# Use ts() and acf() to plot time series data.
+time.data = as.vector(t(data[,-1]))
+time.data = ts(time.data, start=2010, frequency = 12)
+ts.plot(time.data)
+
+acf.data = acf(time.data)
+acf.data
+
+```
+
+**Response: 1a**
+from both plots, there are signs of trend.  and correlation is very strong at beginning, as we increase the lags, the correlation decreases. so it is a violation of stationarity since the mean is not constant.
+
+
+## Question 1b: Trend Estimation
+
+Fit the following trend estimation models:
+
+- Moving average
+- Parametric quadratic polynomial
+- Local Polynomial
+- Splines
+
+Overlay the fitted values derived from each trend estimation model on the corresponding data. Comment on the effectiveness of each model to estimate the trend for the series.
+
+```{r}
+# references: lectures
+ma.pts = c(1:length(time.data))
+ma.pts = c(ma.pts - min(ma.pts))/max(ma.pts)
+
+# moving average
+mav.fit = ksmooth(ma.pts, time.data, kernel = "box")
+time.data.fit.mav = ts(mav.fit$y,start=2010,frequency=12)
+ts.plot(time.data,ylab="Close")
+lines(time.data.fit.mav,lwd=2,col="purple")
+
+#  Parametric quadratic polynomial
+x1 = ma.pts
+x2 = ma.pts^2
+lm.fit = lm(data$Close~x1+x2)
+summary(lm.fit)
+t.fit.lm = ts(fitted(lm.fit),start=2010,frequency=12)
+ts.plot(time.data,ylab="Close")
+lines(t.fit.lm,lwd=2,col="green")
+
+# Local Polynomial
+loc.fit = loess(time.data~ma.pts)
+t.fit.loc = ts(fitted(loc.fit),start=2010,frequency=12)
+ts.plot(time.data,ylab="Close")
+lines(t.fit.loc,lwd=2,col="blue")
+
+## Splines Trend Estimation
+gam.fit = gam(time.data~s(ma.pts))
+t.fit.gam = ts(fitted(gam.fit),start=2010,frequency=12)
+ts.plot(time.data,ylab="Close")
+lines(t.fit.gam,lwd=2,col="red")
+
+#overlay all 
+all = c(time.data.fit.mav, t.fit.lm, t.fit.gam, t.fit.loc)
+ylim= c(min(all),max(all))
+time.data = ts(time.data, start=2010, frequency = 12)
+ts.plot(t.fit.lm,lwd=2,col="green",ylim=ylim)
+lines(time.data.fit.mav,lwd=2,col="purple")
+lines(t.fit.gam,lwd=2,col="red")
+lines(t.fit.loc,lwd=2,col="brown")
+legend(x=1900,y=64,legend=c("MAV","LM","GAM","LOESS"),lty = 1, col=c("purple","green","red","brown"))
+
+```
+
+
+**Response: 1b**
+Splines Trend Estimation is the most proper trend estimation line. 
+
+
+
+## Question 1c: Residual Analysis
+
+Evaluate the quality of each fit using the residual analysis.
+
+```{r}
+
+
+```
+**Response:1c**
+
+
+## Question 1d: Differenced Data Modeling
+
+Now plot the difference time series and its ACF plot. Apply the four trend models in Question 1b to the differenced time series. What can you conclude about the difference data in terms of stationarity? Which model would you recommend to apply (trend removal via fitting trend vs differencing) such that to obtain a stationary process?
+
+```{r}
+
+```
+
+**Response 1d**
+
+
+# Part 2: Temperature Analysis
+
+# Background
+
+In this problem, we will analyze quarterly average temperature data. The data file Temperature HW 2.csv contains average monthly temperature from a southern region from January 1980 through Dec 2016. We will aggregate the data on a quarterly basis, by taking the average rate within each quarter.  We will fit the models on the data until Quarter 4 of 2015 and evaluate the predictions for Q1 to Q4 2016. 
+
+## Instructions on reading the data
+
+To read the data in R, save the file in your working directory (make sure you have changed the directory if different from the R working directory) and read the data using the R function read.csv()
+
+You will perform the analysis and modelling on the Temperature data column.
+
+```{r}
+
+#Run the following code to prepare the data for analysis:
+
+df2 <- read.csv("Temperature HW 2.csv", head = TRUE)
+temp <- ts(df2$Temperature, freq = 12, start = c(1980,1))
+temp <- aggregate.ts(temp, nfrequency = 4)
+```
+
+## Question 2a: Exploratory Data Analysis 
+
+Plot both the Time Series and ACF plots. Comment on the main features, and identify what (if any) assumptions of stationarity are violated. Additionally, consider the differenced data and comment on its features. Support your response with a graphical analysis.
+
+
+```{r}
+
+```
+
+
+**Response: 2a**
+
+
+## Question 2b: Seasonality Estimation
+
+Separately fit a seasonality harmonic model and the ANOVA seasonality model to the temperature data. Evaluate the quality of each fit using the residual analysis. Does one model perform better than the other? Which model would you select to fit the seasonality in the data?
+
+```{r}
+
+
+
+```
+
+**Response: 2b**
+
+
+## Question 2c: Trend-Seasonality Estimation
+
+Using the time-series data, fit the following models to estimate the trend with seasonality fitted using ANOVA:
+
+ - Parametric quadratic polynomial
+ - Non-parametric model
+ 
+Overlay the fitted values of the two models on the original time series. What do you conclude in terms of trend over time?
+
+Plot the residuals with respect to time. Plot the ACF of the residuals. Comment on how the two models fit and on the appropriateness of the stationarity assumption of the residuals.
+
+What form of modeling seems most appropriate and what implications might this have for how one might expect long term temperature data to behave? Provide explicit conclusions based on the data analysis.
+
+```{r}
+
+```
+**Response:2c**
+
+
+## Question 2d: Prediction
+
+Using the trend-seasonality models, predict the temperature data for 4 quarters ahead (Q1 to Q4 2016). Apply both one step ahead rolling predictions as well as predictions 4 steps ahead.  Note that we have had an unusual heated summer this year. How do your predictions compare with the observed average temperature?
+
+Hints: 
+
+- Keep in mind that modeling factors may require extra steps on the data preparation. 
+
+- To predict, you may want to rename the columns of your training data, you could use: setnames(your_data, old = c(), new = c()).
+
+-  You can use predict, or predict.gam for your predictions. 
+
+```{r}
+
+
+
+```
+
+**Response: 2d**
