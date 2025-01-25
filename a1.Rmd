@@ -260,7 +260,10 @@ Plot both the Time Series and ACF plots. Comment on the main features, and ident
 
 
 ```{r}
-# plots of time series data and its acf
+# plots of time series data and its acf. 
+# reference:https://www.cliffsnotes.com/study-notes/6737128, https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/diff, https://www.google.com/search?q=why+seasonality+violates+stationarity+in+time+series+data&oq=why+seasonality+violates+stationarity+in+time+series+data&gs_lcrp=EgZjaHJvbWUyCQgAEEUYORigATIHCAEQIRigATIHCAIQIRigATIHCAMQIRigATIHCAQQIRifBTIHCAUQIRifBTIHCAYQIRifBTIHCAcQIRifBTIHCAgQIRifBTIHCAkQIRifBdIBCTMyMDkwajBqN6gCALACAA&sourceid=chrome&ie=UTF-8
+# all codes below uses the references provided above. 
+
 ts.plot(temp)
 acf(temp, lag.max = 100, type = "correlation")
 ```
@@ -276,17 +279,37 @@ acf(diff.temp, lag.max = 100)
 Both plots of time series data and differencing data showed seasonality, it indicates non-stationary. Because the seasonality shows a repeating pattern over time intervals, which causes mean or variance to change periodically.
 
 
+
 ## Question 2b: Seasonality Estimation
 
 Separately fit a seasonality harmonic model and the ANOVA seasonality model to the temperature data. Evaluate the quality of each fit using the residual analysis. Does one model perform better than the other? Which model would you select to fit the seasonality in the data?
 
 ```{r}
+# lecture notes and first references from above
+
+# seasonality harmonic model
+har.model = lm(temp~harmonic(temp))
+har.fit = ts(fitted(har.model), start =  1980, frequency = 4)
+
+diff.har = ts(temp - har.fit, start = 1980, frequency = 4)
+ts.plot(diff.har, ylab="harmonic model residual analysis")
+acf(diff.har, lag.max = 100)
+
+# anova model
+ano.model = lm(temp ~ season(temp))
+ano.fit = ts(fitted(ano.model), start = 1980, frequency = 4)
+
+diff.ano = ts(temp - ano.fit, start = 1980, frequency = 4)
+ts.plot(diff.ano, ylab="anova model residual analysis")
+acf(diff.ano, lag.max = 100)
 
 
 
 ```
 
 **Response: 2b**
+
+
 
 
 ## Question 2c: Trend-Seasonality Estimation
