@@ -303,12 +303,10 @@ diff.ano = ts(temp - ano.fit, start = 1980, frequency = 4)
 ts.plot(diff.ano, ylab="anova model residual analysis")
 acf(diff.ano, lag.max = 100)
 
-
-
 ```
 
 **Response: 2b**
-
+from the acf plots of two models, the first model, harmonic model still shows a seasonality, whereas the anova model doesnt show a seasonal pattern. so i think anova model fitts better to the residual data, I would choose anova model. 
 
 
 
@@ -326,9 +324,46 @@ Plot the residuals with respect to time. Plot the ACF of the residuals. Comment 
 What form of modeling seems most appropriate and what implications might this have for how one might expect long term temperature data to behave? Provide explicit conclusions based on the data analysis.
 
 ```{r}
+# lecture notes
+time.pts = c(1:length(temp))
+time.pts = c(time.pts - min(time.pts)/max(time.pts))
+
+# paramatric 
+x1=time.pts
+x2=time.pts^2
+
+para= dynlm(temp~x1+x2+season(temp))
+para.fit = ts(fitted(para), start = 1980, frequency = 4)
+
+# non paramatric
+spline = gam(temp~s(time.pts) + season(temp))
+spline.fit= ts(fitted(spline), start = 1980, frequency = 4)
+
+# overlay two models with original data
+ts.plot(temp)
+lines(para.fit, col="red")
+lines(spline.fit, col="blue")
+
+# residual analysis with two models
+# residual analysis on parametric 
+para.diff = ts(temp - para.fit, start = 1980, frequency = 4)
+ts.plot(para.diff)
+acf(para.diff, lag.max = 100)
+
+
+# residual analysis on non paramatric
+spline.diff = ts(temp-spline.fit, start =1980, frequency = 4)
+ts.plot(spline.diff)
+acf(spline.diff, lag.max = 100)
 
 ```
 **Response:2c**
+(1) overlay plot shows a trend with no increasing or decreasing tendency. 
+(2) both models captured trough in residual plots
+(3) from acf of both residual plots. could not find a clear pattern. 
+(4) maybe parametric polynomial model performs a little better since its acf value looks a little smaller compare with spline model.
+(5) from long term view, we should expect a steady trend and seasonality.
+
 
 
 ## Question 2d: Prediction
