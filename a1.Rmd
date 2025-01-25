@@ -379,9 +379,98 @@ Hints:
 -  You can use predict, or predict.gam for your predictions. 
 
 ```{r}
+# reference:https://www.youtube.com/watch?v=WN93HN7cgMs ,
+# https://www.cliffsnotes.com/study-notes/6737128
+
+names(temp)[2] = "Q1"
+# set quarter to categorical variable 
+quat = createDummyFeatures(season(temp))
+
+time.pts.quat = c(1:length(temp))
+time.pts.quat = c(time.pts.quat-min(time.pts.quat)/max(time.pts.quat))
+
+x1.quat = time.pts.quat
+x2.quat = time.pts.quat^2
+
+newdata = cbind(x1.quat, x2.quat, quat[,-1])
+
+# one step each ahead
+quat.ts.one = ts(temp[1:(length(temp) - 4)], frequency = 4, start = 1980)
+quat.new.one = newdata[1: (length(temp) - 4), ]
+quat.model.one = dynlm(quat.ts.one~., data = quat.new.one)
+pred.one= newdata[(length(temp) - 3) : (length(temp) - 3), ]
+pred.one.lm = predict(quat.model.one, pred.one)
+pred.one.lm
+
+quat.ts.two = ts(temp[1:(length(temp) - 3)], frequency = 4, start = 1980)
+quat.new.two = newdata[1: (length(temp) - 3), ]
+quat.model.two = dynlm(quat.ts.two~., data = quat.new.two)
+pred.two= newdata[(length(temp) - 2) : (length(temp) - 2), ]
+pred.two.lm = predict(quat.model.two, pred.two)
+pred.two.lm
+
+quat.ts.three = ts(temp[1:(length(temp) - 2)], frequency = 4, start = 1980)
+quat.new.three = newdata[1: (length(temp) - 2), ]
+quat.model.three = dynlm(quat.ts.three~., data = quat.new.three)
+pred.three= newdata[(length(temp) - 1) : (length(temp) - 1), ]
+pred.three.lm = predict(quat.model.three, pred.three)
+pred.three.lm
+
+quat.ts.four = ts(temp[1:(length(temp) - 1)], frequency = 4, start = 1980)
+quat.new.four = newdata[1: (length(temp) - 1), ]
+quat.model.four = dynlm(quat.ts.four~., data = quat.new.four)
+pred.four = newdata[length(temp) : length(temp), ]
+pred.four.lm = predict(quat.model.four, pred.four)
+pred.four.lm
 
 
+# four steps together same time
+quat.ts.seven = ts(temp[1:(length(temp) - 7)], frequency = 4, start = 1980)
+quat.new.seven = newdata[1: (length(temp) - 7), ]
+quat.model.seven = dynlm(quat.ts.seven~., data = quat.new.seven)
+pred.seven= newdata[(length(temp) - 3) : (length(temp) - 3), ]
+pred.seven.lm = predict(quat.model.seven, pred.seven)
+pred.seven.lm
+
+quat.ts.six = ts(temp[1:(length(temp) - 6)], frequency = 4, start = 1980)
+quat.new.six = newdata[1: (length(temp) - 6), ]
+quat.model.six = dynlm(quat.ts.six~., data = quat.new.six)
+pred.six= newdata[(length(temp) - 2) : (length(temp) - 2), ]
+pred.six.lm = predict(quat.model.six, pred.six)
+pred.six.lm
+
+quat.ts.five = ts(temp[1:(length(temp) - 5)], frequency = 4, start = 1980)
+quat.new.five = newdata[1: (length(temp) - 5), ]
+quat.model.five = dynlm(quat.ts.five~., data = quat.new.five)
+pred.five= newdata[(length(temp) - 1) : (length(temp) - 1), ]
+pred.five.lm = predict(quat.model.five, pred.five)
+pred.five.lm
+
+quat.ts.four.four = ts(temp[1:(length(temp) - 4)], frequency = 4, start = 1980)
+quat.new.four.four = newdata[1: (length(temp) - 4), ]
+quat.model.four.four = dynlm(quat.ts.four.four~., data = quat.new.four.four)
+pred.four.four = newdata[length(temp) : length(temp), ]
+pred.four.four.lm = predict(quat.model.four.four, pred.four.four)
+pred.four.four.lm
+
+
+plot(temp[(length(temp)-3):(length(temp))], xlab="time", ylab="temp")
+points(pred.one.lm, col="green")
+points(pred.two.lm, col="red")
+points(pred.three.lm, col="blue")
+points(pred.four.lm, col="brown")
+
+points(pred.seven.lm, col="purple")
+points(pred.six.lm, col="cyan")
+points(pred.five.lm, col="magenta")
+points(pred.four.four.lm, col="yellow")
 
 ```
 
 **Response: 2d**
+
+Predictions with two different models generate almost same result, just a little slightly difference. predicted value is a little higher than observed temp.
+
+
+
+
