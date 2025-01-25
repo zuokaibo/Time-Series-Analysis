@@ -260,11 +260,20 @@ Plot both the Time Series and ACF plots. Comment on the main features, and ident
 
 
 ```{r}
-
+# plots of time series data and its acf
+ts.plot(temp)
+acf(temp, lag.max = 100, type = "correlation")
 ```
 
+```{r}
+# differencing data
+diff.temp = diff(temp)
+ts.plot(diff.temp)
+acf(diff.temp, lag.max = 100)
+```
 
 **Response: 2a**
+Both plots of time series data and differencing data showed seasonality, it indicates non-stationary. Because the seasonality shows a repeating pattern over time intervals, which causes mean or variance to change periodically.
 
 
 ## Question 2b: Seasonality Estimation
