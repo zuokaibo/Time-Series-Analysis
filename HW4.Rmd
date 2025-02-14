@@ -48,9 +48,22 @@ weekly$week <- as.Date(weekly$week)
 **1a.** Plot the daily and weekly domestic passenger count separately. Do you see a strong trend and seasonality?
 
 ```{r}
+# plot daily passenger count
+head(daily)
+# extract data in count column into a list vector, then fit a trend based on the list
+gam.fit = gam(daily$domestic~s(c(1:length(daily$domestic))))
+daily.trend = fitted(gam.fit)
+# plot counts and its trend.
+daily.plot = plot(daily$date, daily$domestic, xlab="daily", ylab="daily count", type = "l")
+lines(daily$date, daily.trend, lwd = 2, col="red")
+
+#plot weekly passenger count
+head(weekly)
+weekly.plot = plot(weekly$week, weekly$domestic, xlab="week", ylab="weekly count", type="l")
 ```
 
 *Response*
+From both plots, there is a strong cyclic pattern in both plots, but not an obvious seasonal pattern. 
 
 **1b.** (Trend and seasonality) Fit the *weekly* domestic passenger count with a non-parametric trend using splines and monthly seasonality using ANOVA. Is the seasonality significant? Plot the fitted values together with the original time series. Plot the residuals and the ACF of the residuals. Comment on how the model fits and on the appropriateness of the stationarity assumption of the residuals.
 
