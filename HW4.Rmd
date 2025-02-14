@@ -137,7 +137,8 @@ acf(residuals(month.daily.season), lag.max = 600)
 
 *Response:*
 
-From result of anova, month and day of week both have very low p value, suggesting they are statistically significant. from the plot, I can see a strong pattern, which suggests a seasonality. the residual plot suggests a strong variability in the data, acf of residual shows a similar pattern, and most of the lags are outside of confidence band, from overall pattern in acf, i can see a strong seasonlity.  
+From result of anova, month and day of week both have very low p value, suggesting they are statistically significant. from the plot, I can see a strong pattern, which suggests a seasonality. the residual plot suggests a strong variability in the data, acf of residual shows a similar pattern, and most of the lags are outside of confidence band, from overall pattern in acf, i can see a strong seasonality.  
+
 
 
 
@@ -146,10 +147,37 @@ From result of anova, month and day of week both have very low p value, suggesti
 **2a.** (ARMA fitting) Fit a ARMA model with both AR and MA orders of 6 without intercept using the residual processes from Question 1b and 1c for the daily and weekly domestic passenger count, respectively. What are the coefficients of the fitted models? Are the fitted ARMA models causal? (Hint: Set include.mean = FALSE if using arima(). Use polyroot() to find the roots of a polynomial.)
 
 ```{r ARMA fitting}
+# fit arma model using arima function on daily data, since it should be both ar and ma, then give order c(6,0,6)
+daily.arma = arima(residuals(month.daily.season), order = c(6,0,6), method = "ML", include.mean = FALSE)
+# display coefficients
+daily.arma
+
+# fit arma model using arima function on weekly data, since it should be both ar and ma, then give order c(6,0,6)
+weekly.arma = arima(residuals(month.season), order = c(6,0,6), method = "ML", include.mean = FALSE)
+# display coefficients
+weekly.arma
+
+# using zeros to check casuality. Mod() is used to find modulus to see if it is on unit circle. 1 in c() is the coefficient of very first Xt.
+round(Mod(polyroot(c(1, month.daily.season$coefficients[1:6]))), 3)
+
+round(Mod(polyroot(c(1, month.season$coefficients[1:6]))), 3)
 
 ```
 
 *Response* 
+for weekly data, the coefficients are:
+X(t) − 0.8474X(t-1) − 0.7465X(t−2) + 0.8091X(t−3) + 0.1250X(t−4) + 0.7143X(t−5) + 0.3948X(t−6) = Z(t) - 0.4225Z(t−1) + 1.1811Z(t−2) + 0.3485Z(t−3) − 0.4802Z(t−4) + 0.4261Z(t−5) − 0.2908Z(t−6)
+
+for daily data, the coefficents are:
+X(t) + 0.3565X(t-1) − 0.5897X(t−2) + 0.1171X(t−3) + 0.8214X(t−4) - 0.0698X(t−5) - 0.7964X(t−6) = Z(t) - 0.6431(t−1) + 0.246Z(t−2) + 0.3485Z(t−3) − 0.9491Z(t−4) - 0.2790Z(t−5) − 0.5356Z(t−6)
+
+since some root are inside of unit circle, so the arma process is not causal.
+
+
+
+
+
+
 
 **2b.** (Residual analysis) Plot the residual processes of the two fitted models in Question 2a. Display the ACF, PACF, QQ-plot of these residual processes. Do the residual processes satisfies the assumptions of the R implementation?
 
