@@ -274,16 +274,30 @@ all lags fell inside the confidence band except first one, suggesting the model 
 
 ```{r forecasting}
 
+prediction = predict(weekly.arma.ar, n.ahead = weekly.row - training.data)
 
+plot(weekly$week[training.data:weekly.row], weekly$domestic[training.data:weekly.row], type="l", xlab ="time", ylab="weekly count", ylim = c(80000, 220000))
 
+points(weekly$week[(training.data+1):weekly.row], prediction$pred, col="red")
 
+upperbound = prediction$pred + 2.58*prediction$se 
+lowerbound = prediction$pred - 2.58*prediction$se
 
+lines(weekly$week[(training.data+1):weekly.row], upperbound, col="blue")
+lines(weekly$week[(training.data+1):weekly.row], lowerbound, col="blue")
 
+legend("topleft", legend=c("weekly count", "predicted value", "confidence band"), lwd = 2, col =c("black", "red", "blue"))
+
+actual.data = weekly$domestic[(training.data+1):weekly.row]
+
+comparison = data.frame(actual.data, prediction$pred, upperbound, lowerbound)
+
+print(comparison)
 
 ```
 
 *Response* 
-
+from the output, all actual data fall inside the 99% confidence band for the remaining weeks. i think it is because of 99% confidence band which is very wide, including large uncertainty and variability.  
 
 
 
