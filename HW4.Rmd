@@ -177,23 +177,26 @@ since some root are inside of unit circle, so the arma process is not causal.
 
 
 
-
-
 **2b.** (Residual analysis) Plot the residual processes of the two fitted models in Question 2a. Display the ACF, PACF, QQ-plot of these residual processes. Do the residual processes satisfies the assumptions of the R implementation?
 
 ```{r residual analysis and plot}
+# plot of residual, acf of residual, pacf of residual, qqplot of residual --- daily data
+plot(daily$date, residuals(daily.arma), xlab="time", ylab="daily residual", type = "l")
+acf(residuals(daily.arma), lag.max = 600)
+pacf(residuals(daily.arma), lag.max = 600)
+qqPlot(residuals(daily.arma), ylab="daily residuals")
+
+# plot of residual, acf of residual, pacf of residual, qqplot of residual --- weekly data
+plot(weekly$week, residuals(weekly.arma), xlab="time", ylab="weekly residual", type = "l")
+acf(residuals(weekly.arma), lag.max = 60)
+pacf(residuals(weekly.arma), lag.max = 60)
+qqPlot(residuals(weekly.arma), ylab="weekly residuals")
 
 ```
 
 *Response* 
 
-
-
-
-
-
-
-
+In arma model with trend and seasonality, acf, pacf plots suggest correlation within the weekly and daily data, there are some values are outside of pacf confidence band. QQplot suggest it in general can be considered as normal distribution even though at both tails diverge apart from the line.
 
 
 
