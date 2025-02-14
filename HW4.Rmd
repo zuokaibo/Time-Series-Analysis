@@ -99,22 +99,45 @@ acf(residuals(month.season), lag.max = 100)
 
 *Response:*
 
-(1) Based on anova result, the p value is very small , close to 0, indicating seasonality based on month has improved the prediction power of the model. and it suggests a seasonality overall and a trend, but relatively very small. the residual plot shows some pattern overall, for examples, there are spikes and troughs in some slightly "regular" way, the acf of residual shows some lags' value is outside confidence band, indicating the residual is not stationary due to seasonality.  
+Based on anova result, the p value is very small , close to 0, indicating seasonality based on month has improved the prediction power of the model. and it suggests a seasonality overall and a trend, but relatively very small. the residual plot shows some pattern overall, for examples, there are spikes and troughs in some slightly "regular" way, the acf of residual shows some lags' value is outside confidence band, indicating the residual is not stationary due to seasonality.  
+
 
 
 **1c.** (Trend and seasonality) This time fit the *daily* domestic passenger count with a non-parametric trend using splines, monthly and day-of-the-week seasonality using ANOVA. Plot the fitted values together with the original time series. Are the seasonal effects significant? Plot the residuals and the ACF of the residuals. Comment on how the model fits and on the appropriateness of the stationarity assumption of the residuals.
 
 ```{r non-parametric trend (daily)}
+#spline trend on daily data.s means smooth function which is executed by gam()
+daily.gam.fit = gam(daily$domestic~s(c(1:length(daily$domestic))))
+
+# find fitted value based on the trend
+daily.trend = fitted(daily.gam.fit)
+
+# fit monthly seasonality and day of the week seasonality using anova.  
+daily.month = as.factor(format(daily$date,"%b"))
+day.of.week = as.factor(weekdays(daily$date))
+
+#fit the model with month and day of the week.
+month.daily.season = gam(daily$domestic~daily.month  + day.of.week)
+
+#using anova to check the performance of the model
+anova(month.daily.season)
+
+#plot original data and fitted value.
+plot(daily$date, daily$domestic, col="blue", type ="l", xlab="Time", ylab = "daily count")
+lines(daily$date, fitted(month.daily.season), col="red", lwd = 1)
+legend("topleft", legend = c("origianl daily count", "fitted value"), lwd=1, col=c("blue", "red"))
+
+#plot residuals
+plot(daily$date, residuals(month.daily.season), type ="l", lwd =1, xlab="time", ylab="residuals")
+
+#plot acf of residuals
+acf(residuals(month.daily.season), lag.max = 600)
 
 ```
 
 *Response:*
 
-
-
-
-
-
+From result of anova, month and day of week both have very low p value, suggesting they are statistically significant. from the plot, I can see a strong pattern, which suggests a seasonality. the residual plot suggests a strong variability in the data, acf of residual shows a similar pattern, and most of the lags are outside of confidence band, from overall pattern in acf, i can see a strong seasonlity.  
 
 
 
