@@ -2,7 +2,10 @@
 title: "Untitled"
 author: "HW4"
 date: "2025-02-14"
-output: pdf_document
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include = FALSE}
@@ -166,13 +169,12 @@ round(Mod(polyroot(c(1, month.season$coefficients[1:6]))), 3)
 
 *Response* 
 for weekly data, the coefficients are:
-X(t) − 0.8474X(t-1) − 0.7465X(t−2) + 0.8091X(t−3) + 0.1250X(t−4) + 0.7143X(t−5) + 0.3948X(t−6) = Z(t) - 0.4225Z(t−1) + 1.1811Z(t−2) + 0.3485Z(t−3) − 0.4802Z(t−4) + 0.4261Z(t−5) − 0.2908Z(t−6)
+X(t) _ 0.8474X(t_1) _ 0.7465X(t_2) + 0.8091X(t_3) + 0.1250X(t_4) + 0.7143X(t_5) + 0.3948X(t_6) = Z(t) _ 0.4225Z(t_1) + 1.1811Z(t_2) + 0.3485Z(t_3) _ 0.4802Z(t_4) + 0.4261Z(t_5) _ 0.2908Z(t_6)
 
 for daily data, the coefficents are:
-X(t) + 0.3565X(t-1) − 0.5897X(t−2) + 0.1171X(t−3) + 0.8214X(t−4) - 0.0698X(t−5) - 0.7964X(t−6) = Z(t) - 0.6431(t−1) + 0.246Z(t−2) + 0.3485Z(t−3) − 0.9491Z(t−4) - 0.2790Z(t−5) − 0.5356Z(t−6)
+X(t) + 0.3565X(t_1) _ 0.5897X(t_2) + 0.1171X(t_3) + 0.8214X(t_4) _ 0.0698X(t_5) _ 0.7964X(t_6) = Z(t) _ 0.6431(t_1) + 0.246Z(t_2) + 0.3485Z(t_3) _ 0.9491Z(t_4) _ 0.2790Z(t_5) _ 0.5356Z(t_6)
 
 since some root are inside of unit circle, so the arma process is not causal.
-
 
 
 
@@ -243,27 +245,50 @@ In arma model with trend and seasonality, acf, pacf plots suggest correlation wi
 
 
 
-
-
-
-
-
-
-
 # Question 4. Seasonal ARMA model and forecasting: Weekly domestic passenger count
 
 **4a.** (Seasonal ARMA) Use the first 185 data points of weekly domestic passenger count as training data. Fit a seasonal ARMA model with intercept, where the non-seasonal model is ARMA(1,1) and the seasonal model is AR(1) with a period of 52 weeks. Plot the residual process and the ACF of the residual process. Comment on the appropriateness of the fitted model.
 
 ```{r Seasonal ARMA}
+training.data = 185
+weekly.row = nrow(weekly)
+
+weekly.arma.ar = arima(weekly$domestic[1:training.data], order=c(1,0,1), seasonal = list(order = c(1,0,0), period= 52), method = "ML")
+
+weekly.arma.ar
+
+plot(weekly$week[1:training.data], residuals(weekly.arma.ar), type = "l", ylab="weekly residuals")
+
+acf(residuals(weekly.arma.ar), lag.max = 60)
 
 ```
 
 *Response:* 
 
+all lags fell inside the confidence band except first one, suggesting the model is a good fit. 
+
+
+
+
 **4b.** (Forecasting) Use the fitted model in Question 4a to predict the total passenger count of the remainder of the weeks. Plot the 99% confidence interval. Compare with the actual observation. Does the actual observation fell into the 99% confidence interval?
 
 ```{r forecasting}
 
+
+
+
+
+
+
 ```
 
 *Response* 
+
+
+
+
+
+
+
+
+
