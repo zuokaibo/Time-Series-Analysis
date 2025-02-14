@@ -273,9 +273,25 @@ best porder and qorder is 3 and 7, so the best model is arma(3, 7), aic is 19357
 
 ```{r residual analysis}
 
+ts.plot(residuals(best.arma), ylab="residual")
+
+acf(residuals(best.arma), lag.max = 365)
+
+pacf(residuals(best.arma), lag.max = 365)
+
+qqPlot(residuals(best.arma), ylab="residual")
+
 ```
 
 *Response:* 
+from acf and pacf plot, the very last lag has extreme value, which also can be seen in residual process plot. from qqplot, it follows normal distribution. 
+
+
+
+
+
+
+
 
 **3d.** (Testing uncorrelated residuals) Use the Ljung-Box Test to decide whether the residuals of the selected ARMA model in Question 3b are correlated.
 
