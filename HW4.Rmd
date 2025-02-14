@@ -232,10 +232,42 @@ it is not a pure ar process since the pacf does not cut off. I would say ar(6) p
 **3b.** (ARMA fitting and order selection). Fit an ARMA model without intercept using the differenced daily data with AR and MA order up to 8. Select the best ARMA model using AICc. What is the order for the selected model and what is its AICc?
 
 ```{r ARMA model}
+# reference lecture note
+# chrome-extension://oemmndcbldboiebfnladdacbdfmadadm/https://www.cliffsnotes.com/api/v1/documents/download/6736870/
+
+n = length(daily.differencing.year)
+norder = 8
+p = c(1:norder)-1
+q = c(1:norder)-1
+
+aic = matrix(0, norder, norder)
+
+for (i in 1:norder) {
+  for (j in 1:norder) {
+    modij = arima(daily.differencing.year, order=c(p[i], 0, q[j]), method = "ML", include.mean = FALSE)
+    aic[i, j] = modij$aic + 2 * (p[i] + q[j] +1) * (p[i] + q[j])/(n - p[i] - q[j] - 1)
+  } 
+}
+
+indexp = rep(c(1:norder),norder)
+indexq = rep(c(1:norder),each=norder)
+indexaic = which(aic == min(aic))
+porder = indexp[indexaic]-1
+qorder = indexq[indexaic]-1
+porder 
+qorder
+
+best.arma = arima(daily.differencing.year, order = c(porder, 0, qorder), method = "ML", include.mean = FALSE)
+best.arma
 
 ```
 
 *Response:* 
+best porder and qorder is 3 and 7, so the best model is arma(3, 7), aic is 19357.43
+
+
+
+
 
 **3c.** (Residual analysis) Plot the residual process of the selected model in Question 3b. Display the ACF, PACF and QQ plot of the residual process. How does this model compare to the one on daily passenger count data in Question 2b?
 
