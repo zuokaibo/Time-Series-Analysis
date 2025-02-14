@@ -192,6 +192,8 @@ acf(residuals(weekly.arma), lag.max = 60)
 pacf(residuals(weekly.arma), lag.max = 60)
 qqPlot(residuals(weekly.arma), ylab="weekly residuals")
 
+
+
 ```
 
 *Response* 
