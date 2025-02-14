@@ -50,7 +50,7 @@ weekly$week <- as.Date(weekly$week)
 ```{r}
 # plot daily passenger count
 head(daily)
-# extract data in count column into a list vector, then fit a trend based on the list using mgcv package
+# extract data in count column into a list vector, then fit a trend based on the list using mgcv package, hich is used for spline trend.
 daily.gam.fit = gam(daily$domestic~s(c(1:length(daily$domestic))))
 daily.trend = fitted(daily.gam.fit)
 # plot counts and its trend.
@@ -73,10 +73,34 @@ From both plots, there is a strong cyclic pattern in both plots, but not an obvi
 **1b.** (Trend and seasonality) Fit the *weekly* domestic passenger count with a non-parametric trend using splines and monthly seasonality using ANOVA. Is the seasonality significant? Plot the fitted values together with the original time series. Plot the residuals and the ACF of the residuals. Comment on how the model fits and on the appropriateness of the stationarity assumption of the residuals.
 
 ```{r non-parametric trend (weekly)}
+#spline trend on weekly data.s means smooth function which is executed by gam()
+weekly.gam.fit = gam(weekly$domestic~s(c(1:length(weekly$domestic))))
+
+# find fitted value based on the trend
+weekly.trend = fitted(weekly.gam.fit)
+
+# fit monthly seasonality using anova. first, need to convert weekly date into month factors.then fit it into lm regression, then use anova to test if the null hyporthesis is correct. 
+weekly.month = as.factor(format(weekly$week, "%b"))
+month.season = gam(weekly$domestic~weekly.month)
+anova(month.season)
+
+#plot original data and fitted value.
+plot(weekly$week, weekly$domestic, col="blue", type ="l", xlab="Time", ylab = "weekly count")
+lines(weekly$week, fitted(month.season), col="red", lwd = 1)
+legend("topleft", legend = c("origianl weekly count", "fitted value"), lwd=1, col=c("blue", "red"))
+
+#plot residuals
+plot(weekly$week, residuals(month.season), type ="l", lwd =1, xlab="time", ylab="residuals")
+
+#plot acf of residuals
+acf(residuals(month.season), lag.max = 100)
 
 ```
 
 *Response:*
+
+(1) Based on anova result, the p value is very small , close to 0, indicating seasonality based on month has improved the prediction power of the model. and it suggests a seasonality overall and a trend, but relatively very small. the residual plot shows some pattern overall, for examples, there are spikes and troughs in some slightly "regular" way, the acf of residual shows some lags' value is outside confidence band, indicating the residual is not stationary due to seasonality.  
+
 
 **1c.** (Trend and seasonality) This time fit the *daily* domestic passenger count with a non-parametric trend using splines, monthly and day-of-the-week seasonality using ANOVA. Plot the fitted values together with the original time series. Are the seasonal effects significant? Plot the residuals and the ACF of the residuals. Comment on how the model fits and on the appropriateness of the stationarity assumption of the residuals.
 
@@ -85,6 +109,14 @@ From both plots, there is a strong cyclic pattern in both plots, but not an obvi
 ```
 
 *Response:*
+
+
+
+
+
+
+
+
 
 # Question 2. ARMA fitting and residual analysis
 
@@ -103,6 +135,18 @@ From both plots, there is a strong cyclic pattern in both plots, but not an obvi
 ```
 
 *Response* 
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Question 3. ARMA fitting and model selection: Differenced daily domestic passenger count
 
@@ -137,6 +181,18 @@ From both plots, there is a strong cyclic pattern in both plots, but not an obvi
 ```
 
 *Response:* 
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Question 4. Seasonal ARMA model and forecasting: Weekly domestic passenger count
 
