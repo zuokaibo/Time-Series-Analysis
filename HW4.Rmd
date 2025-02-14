@@ -289,19 +289,16 @@ from acf and pacf plot, the very last lag has extreme value, which also can be s
 
 
 
-
-
-
-
 **3d.** (Testing uncorrelated residuals) Use the Ljung-Box Test to decide whether the residuals of the selected ARMA model in Question 3b are correlated.
 
 ```{r Ljung-Box test}
+Box.test(best.arma$residuals, lag=(3 + 7 + 1), type = "Ljung-Box", fitdf = (3 + 7))
 
 ```
 
 *Response:* 
 
-
+the P value is bigger than 0.05, indicating the residuals are independent, meaning not autocorrelated.
 
 
 
