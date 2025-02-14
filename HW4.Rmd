@@ -50,20 +50,25 @@ weekly$week <- as.Date(weekly$week)
 ```{r}
 # plot daily passenger count
 head(daily)
-# extract data in count column into a list vector, then fit a trend based on the list
-gam.fit = gam(daily$domestic~s(c(1:length(daily$domestic))))
-daily.trend = fitted(gam.fit)
+# extract data in count column into a list vector, then fit a trend based on the list using mgcv package
+daily.gam.fit = gam(daily$domestic~s(c(1:length(daily$domestic))))
+daily.trend = fitted(daily.gam.fit)
 # plot counts and its trend.
 daily.plot = plot(daily$date, daily$domestic, xlab="daily", ylab="daily count", type = "l")
 lines(daily$date, daily.trend, lwd = 2, col="red")
 
-#plot weekly passenger count
+#plot weekly passenger count, same processure as above
 head(weekly)
+#str(weekly)
+weekly.gam.fit = gam(weekly$domestic~s(c(1:length(weekly$domestic))))
+weekly.trend = fitted(weekly.gam.fit)
 weekly.plot = plot(weekly$week, weekly$domestic, xlab="week", ylab="weekly count", type="l")
+lines(weekly$week, weekly.trend, lwd = 2, col ="green")
 ```
 
 *Response*
-From both plots, there is a strong cyclic pattern in both plots, but not an obvious seasonal pattern. 
+From both plots, there is a strong cyclic pattern in both plots, but not an obvious seasonal pattern. About trend, there may exist a trend, but not very evident. 
+
 
 **1b.** (Trend and seasonality) Fit the *weekly* domestic passenger count with a non-parametric trend using splines and monthly seasonality using ANOVA. Is the seasonality significant? Plot the fitted values together with the original time series. Plot the residuals and the ACF of the residuals. Comment on how the model fits and on the appropriateness of the stationarity assumption of the residuals.
 
