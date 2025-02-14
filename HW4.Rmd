@@ -211,10 +211,23 @@ In arma model with trend and seasonality, acf, pacf plots suggest correlation wi
 **3a.** (Differencing for seasonality) Difference the daily domestic passenger count by 7 days, then again by 365 days. Plot the differenced time series, its ACF and PACF. Does this looks like a pure AR/MA process from the ACF/PACF plot?
 
 ```{r differencing for seasonality}
+daily.differencing.seven = diff(daily$domestic, 7)
+daily.differencing.year = diff(daily.differencing.seven, 365)
+
+ts.plot(daily.differencing.seven, ylab = "differencing daily count by 7")
+ts.plot(daily.differencing.year, ylab = "differencing daily count by 365")
+
+acf(daily.differencing.year, lag.max = 200)
+
+pacf(daily.differencing.year, lag.max = 200)
 
 ```
 
 *Response:* 
+it is not a pure ar process since the pacf does not cut off. I would say ar(6) process because acf cuts off when lags is 6 and pacf is gradually tails off. 
+
+
+
 
 **3b.** (ARMA fitting and order selection). Fit an ARMA model without intercept using the differenced daily data with AR and MA order up to 8. Select the best ARMA model using AICc. What is the order for the selected model and what is its AICc?
 
