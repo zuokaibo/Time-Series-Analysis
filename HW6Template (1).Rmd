@@ -70,12 +70,14 @@ The difference between daily stock price data and weekly stock data is daily sto
 **1b.** Plot the time series plots comparing daily vs weekly data. How do the daily vs weekly time series data compare?
 
 ```{r}
-
-
-
+plot(AAPLWeekly)
+plot(AAPLDaily)
 ```
 
 *Response: Weekly vs daily Time Series data comparison* 
+ 
+A similar non-linear trend has exhibited in both daily stock price and weekly stock price datasets. In general, the trend line is increasing overtime in both plots. the price from 2013 has gradually smoothly increased until 2022, then fluctuation in the trend started appearing more often than the past period, probably due to variability in the industrial recovery from Corona.  
+
 
 
 **1c.** Fit a non-parametric trend using splines regression to both the daily and weekly time series data. Overlay the fitted trends. How do the trends compare?
