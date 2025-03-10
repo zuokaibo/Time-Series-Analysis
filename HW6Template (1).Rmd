@@ -269,24 +269,61 @@ aic.diff.two = round(weekly.final.diff.two$aic, 3)
 **2b.** Evaluate the model residuals and squared residuals using the ACF and PACF plots as well as hypothesis testing for serial correlation for both daily and weekly data. What would you conclude based on this analysis?
 
 ```{r}
-# daily residual, here I am using differencing ordder 
+# daily residual 
 daily.resid = resid(daily.final.diff.one)
 plot(daily.resid, main = "daily residual plot")
 acf(daily.resid, main = " daily residual ACF")
 pacf(daily.resid, main = "daily residual PACF")
-Box.test(daily.resid, lag = ())
+Box.test(daily.resid, lag = ( 6+3+1), type = "Ljung-Box", fitdf = (6+3))
 
-
+# weekly residual
+weekly.resid = resid(weekly.final.diff.two)
+plot(weekly.resid, main = "weekly residual plot")
+acf(weekly.resid, main = " weekly residual ACF")
+pacf(weekly.resid, main = "weekly residual PACF")
+Box.test(daily.resid, lag = ( 0 + 2 +1), type = "Ljung-Box", fitdf = (0+2))
 
 ```
 
 *Response:ARIMA residual analysis for the Weekly and daily Data*
+It is different to distingush which model is better to fit the data from residual plot or ACF plots, since in acf plot, all lags in both weekly and daily data are all within confidence band, indicating uncorrelation, but from pacf, there are some lags are outside of confidence band in weekly data, it probably because it is 95% confidence band, so there are 5% of lags would be outside of band. But from p values of both model, they all quite big, null hypo of Ljung Box test is that the data are uncorrelated against they are correlated, so from the p value, the test indicates they are uncorrelated. 
 
 
 
 **2c.** Apply the model identified in (2a) and forecast the last week of data using both daily and weekly data. Plot the predicted data to compare the predicted values to the actual observed ones. Include 95% confidence intervals for the forecasts in the corresponding plots.
 
 ```{r}
+# prediction on weekly stock close price 
+n = length(new.weekly)
+n.train = length(weeklystock.train)
+n.pred = n - n.train
+
+prediction = predict(weekly.final.diff.two, n.ahead = n.pred)
+
+upperbound = prediction$pred + 1.96*prediction$se
+lowerbound = prediction$pred - 1.96*prediction$se
+
+plot(index(AAPLWeekly)[(n-n.pred-4):n], new.weekly[(n-n.pred - 4) :n], type = "l", ylim = c(min(lowerbound), max(upperbound)))
+points((index(AAPLWeekly))[(n.train + 1):n], prediction$pred, col="blue")
+lines((index(AAPLWeekly))[(n.train + 1):n], upperbound, lty = 2, lwd = 2, col = "red")
+lines((index(AAPLWeekly))[(n.train + 1):n], lowerbound, lty = 2, lwd = 2, col = "red")
+
+
+#predciton on daily stock close price 
+
+n.daily = length(new.daily)
+n.train.daily = length(dailystock.train)
+n.pred.daily = n.daily - n.train.daily
+
+prediction.daily = predict(daily.final.diff.one, n.ahead = n.pred.daily)
+
+upperbound.daily = prediction.daily$pred + 1.96*prediction.daily$se
+lowerbound.daily = prediction.daily$pred - 1.96*prediction.daily$se
+
+plot(index(AAPLDaily)[(n.daily-n.pred.daily-4):n.daily], new.daily[(n.daily-n.pred.daily - 4):n.daily], type = "l", ylim = c(min(lowerbound.daily), max(upperbound.daily)))
+points((index(AAPLDaily))[(n.train.daily + 1):n.daily], prediction.daily$pred, col="blue")
+lines((index(AAPLDaily))[(n.train.daily + 1):n.daily], upperbound.daily, lty = 2, lwd = 2, col = "red")
+lines((index(AAPLDaily))[(n.train.daily + 1):n.daily], lowerbound.daily, lty = 2, lwd = 2, col = "red")
 
 
 ```
@@ -297,11 +334,41 @@ Box.test(daily.resid, lag = ())
 **2d.** Calculate Mean Absolute Percentage Error (MAPE) and Precision Measure (PM) (PM only for daily data). How many observations are within the prediction bands? Compare the accuracy of the predictions for the daily and weekly time series using these two measures. 
 
 ```{r}
+# daily 
+true.daily = as.vector (new.daily[(n.train.daily + 1) : n.daily])
 
+mape.daily = mean(abs(prediction.daily$pred-true)/ true)
+print("MAPE of daily stock close price")
+mape.daily
+
+pm.daily = (sum(prediction.daily$pred-true)^2)/(sum(true - mean(true))^2)
+print("PM of daily stock close price")
+pm.daily
+
+print("How many observations are within PI in daily stock close price prediction")
+number.daily = (sum(true < upperbound.daily) & sum(true > lowerbound.daily))
+number.daily
+
+#weekly
+true.weekly = as.vector (new.weekly[(n.train + 1) : n])
+
+mape.weekly = mean(abs(prediction$pred-true.weekly)/ true.weekly)
+print("MAPE of weekly stock close price")
+mape.weekly
+
+pm.weekly = (sum(prediction$pred-true.weekly)^2)/(sum(true.weekly - mean(true.weekly))^2)
+print("PM of weekly stock close price")
+pm.weekly
+
+print("How many observations are within PI in weekly stock close price prediction")
+number.weekly = (sum(true < upperbound.daily) & sum(true > lowerbound.daily))
+number.weekly
 
 ```
 
 *Response: Prediction Comparison* 
+In both prediction model, no predicted value is out of prediction band. About value of MAPE and PM, the value is smaller, the better model is, since the accuracy is (1-value of MAPE or PM)*100%.So from the MAPE , PM value, the model that fits weekly stock close price is better comparing to the model derived from daily stock close price. But since the values of MAPE, PM both are not too small, I conclude that no models fit the data well enough. 
+
 
 
 #Question 3: ARMA(p,q)-GARCH(m,n) for Return Stock Price 
