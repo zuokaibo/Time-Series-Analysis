@@ -195,20 +195,88 @@ qorder
 daily.final.diff.two = arima(dailystock.train, order = c(porder, 2, qorder), method = "ML")
 daily.final.diff.two
 
+daily.aic.diff.one = round(daily.final.diff.one$aic, 3)
+daily.aic.diff.two = round(daily.final.diff.two$aic, 3)
+
 ```
 
 
+```{r}
+#finding best p and q value on weekly stock close price data
+new.weekly = AAPLWeekly
+weeklystock.train = new.weekly[1:(length(new.weekly)-excluding.date)]
+weeklystock.test = new.weekly[(length(new.weekly) - excluding.date + 1) : length(new.weekly)]
+
+#differencing order is 1 on weekly stock close price
+n = length(weeklystock.train)
+norder = 7
+p = c(1:norder)-1
+q = c(1:norder)-1
+
+aic = matrix(0, norder, norder)
+
+# differencing with order 1
+for (i in 1:norder) {
+  for (j in 1:norder) {
+    modij = arima(weeklystock.train, order=c(p[i], 1, q[j]), method = "ML", include.mean = FALSE)
+    aic[i, j] = modij$aic + 2 * (p[i] + q[j] +1)  * (p[i] + q[j]) / (n - p[i] - q[j] - 1)
+  } 
+}
+
+indexp = rep(c(1:norder),norder)
+indexq = rep(c(1:norder),each=norder)
+indexaic = which(aic == min(aic))
+porder = indexp[indexaic]-1
+qorder = indexq[indexaic]-1
+porder 
+qorder
+
+weekly.final.diff.one = arima(weeklystock.train, order = c(porder, 1, qorder), method = "ML")
+weekly.final.diff.one
+
+#differencing with order 2
+for (i in 1:norder) {
+  for (j in 1:norder) {
+    modij = arima(weeklystock.train, order=c(p[i], 2, q[j]), method = "ML", include.mean = FALSE)
+    aic[i, j] = modij$aic + 2 * (p[i] + q[j] +1)  * (p[i] + q[j]) / (n - p[i] - q[j] - 1)
+  } 
+}
+
+indexp = rep(c(1:norder),norder)
+indexq = rep(c(1:norder),each=norder)
+indexaic = which(aic == min(aic))
+porder = indexp[indexaic]-1
+qorder = indexq[indexaic]-1
+porder 
+qorder
+
+weekly.final.diff.two = arima(weeklystock.train, order = c(porder, 2, qorder), method = "ML")
+weekly.final.diff.two
+
+aic.diff.one = round(weekly.final.diff.one$aic, 3)
+aic.diff.two = round(weekly.final.diff.two$aic, 3)
+
+```
 
 
 *Response: Analysis of the ARIMA Fit for the weekly and daily Data* 
 
-When using test data to find best p and q with differecing order is 1, the best p value is 6, best q value is 3, however when differencing order is 2, the best p value is 0 and q value is 2. 
+(1)When using test daily stock close price data to find best p and q with differecing order 1, the best p value is 6, best q value is 3, however when differencing order is 2, the best p value is 0 and q value is 2. the aic of differencing order 1 is slightly lower than differncing order being 2. so I would use p = 6, d = 1, and q = 3 as final model in daily stock close price data
 
+(2)When using test weekly stock close price data to find best p and q with differencing order 1, the best p value is 5, best q value is 5 too, whereas when differencing order is 2, the best p value is 1 and q value is 2, which is same as the values in daily stock close price. aic from differencing order being 2 is alittle lower, so I would use differencing order being 2, p being 0 and q being 2 as final model in weekly stock close price data.
 
 
 **2b.** Evaluate the model residuals and squared residuals using the ACF and PACF plots as well as hypothesis testing for serial correlation for both daily and weekly data. What would you conclude based on this analysis?
 
 ```{r}
+# daily residual, here I am using differencing ordder 
+daily.resid = resid(daily.final.diff.one)
+plot(daily.resid, main = "daily residual plot")
+acf(daily.resid, main = " daily residual ACF")
+pacf(daily.resid, main = "daily residual PACF")
+Box.test(daily.resid, lag = ())
+
+
 
 ```
 
