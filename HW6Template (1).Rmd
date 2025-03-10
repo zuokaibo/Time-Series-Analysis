@@ -131,12 +131,12 @@ for (j in 1:length(AAPLDaily)) {
 }
 daily.return = ts(daily.return.formular, start = c(2013,1,1), freq=252)
 plot(daily.return, main="daily return")
-acf(daily.return, main="ACF of daily return", na.action = na.pass, max.lag=400)
+acf(daily.return, main="ACF of daily return", na.action = na.pass, lag.max =260)
 
 ```
 *Response: Return series vs price series analysis* 
 
-Both plots of daily return and weekly return stock price have exhibit a non constant variance, this violates stationary that variance needs to be constant. From the ACF of weekly return, most of lags are out of confidence band, implies autocorrelation, a serial dependence, whereas the daily return acf plot, all lags are within confidence band,indicating a uncorrelated relation. 
+Both plots of daily return and weekly return stock price have exhibit a non constant variance, this violates stationary that variance needs to be constant. From the ACF of weekly return, most of lags are out of confidence band, implies autocorrelation, a serial dependence, whereas the daily return acf plot, almost all lags are within confidence band,indicating a uncorrelated relation. 
 
 
 #Question 2: ARIMA(p,d,q) for Stock Price
@@ -144,13 +144,65 @@ Both plots of daily return and weekly return stock price have exhibit a non cons
 **2a.** Divide the data into training and testing data set, where the training data exclude the last week of data (Aug 26th-Aug 30th) with the testing data including the last week of data. Apply the iterative model to fit an ARIMA(p,d,q) model with max AR and MA orders of 7 and difference orders 1 and 2 separately to the training datasets of the daily and weekly data. Display the summary of the final model fit.
 
 ```{r}
+# the last excluding date from 26th to 30th , four days. 
+excluding.date = 4 
+new.daily = AAPLDaily
+dailystock.train = new.daily[1:(length(new.daily)-excluding.date)]
+dailystock.test = new.daily[(length(new.daily) - excluding.date + 1) : length(new.daily)]
+# reference: lecture notes from module 2
+n = length(dailystock.train)
+norder = 7
+p = c(1:norder)-1
+q = c(1:norder)-1
 
+aic = matrix(0, norder, norder)
+
+# differencing with order 1
+for (i in 1:norder) {
+  for (j in 1:norder) {
+    modij = arima(dailystock.train, order=c(p[i], 1, q[j]), method = "ML", include.mean = FALSE)
+    aic[i, j] = modij$aic + 2 * (p[i] + q[j] +1)  * (p[i] + q[j]) / (n - p[i] - q[j] - 1)
+  } 
+}
+
+indexp = rep(c(1:norder),norder)
+indexq = rep(c(1:norder),each=norder)
+indexaic = which(aic == min(aic))
+porder = indexp[indexaic]-1
+qorder = indexq[indexaic]-1
+porder 
+qorder
+
+daily.final.diff.one = arima(dailystock.train, order = c(porder, 1, qorder), method = "ML")
+daily.final.diff.one
+
+#differencing with order 2
+for (i in 1:norder) {
+  for (j in 1:norder) {
+    modij = arima(dailystock.train, order=c(p[i], 2, q[j]), method = "ML", include.mean = FALSE)
+    aic[i, j] = modij$aic + 2 * (p[i] + q[j] +1)  * (p[i] + q[j]) / (n - p[i] - q[j] - 1)
+  } 
+}
+
+indexp = rep(c(1:norder),norder)
+indexq = rep(c(1:norder),each=norder)
+indexaic = which(aic == min(aic))
+porder = indexp[indexaic]-1
+qorder = indexq[indexaic]-1
+porder 
+qorder
+
+daily.final.diff.two = arima(dailystock.train, order = c(porder, 2, qorder), method = "ML")
+daily.final.diff.two
 
 ```
 
 
 
+
 *Response: Analysis of the ARIMA Fit for the weekly and daily Data* 
+
+When using test data to find best p and q with differecing order is 1, the best p value is 6, best q value is 3, however when differencing order is 2, the best p value is 0 and q value is 2. 
 
 
 
