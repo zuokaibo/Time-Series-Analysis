@@ -84,13 +84,26 @@ A similar non-linear trend has exhibited in both daily stock price and weekly st
 
 *Analyzing weekly and daily data with trend fitting*
 ```{r}
+time.pts.weekly = c(1:length(AAPLWeekly))
+time.pts.weekly = c(time.pts.weekly - min(time.pts.weekly)) / max(time.pts.weekly)
+spline.weekly = gam(AAPLWeekly~s(time.pts.weekly))
+spline.weekly.fit = ts(fitted(spline.weekly), start=c(2013,1,1), freq=52.18)
+plot(AAPLWeekly, main = "weekly stock close price")
+lines(spline.weekly.fit, lwd=2, col="blue")
 
+
+time.pts.daily = c(1:length(AAPLDaily))
+time.pts.daily = c(time.pts.daily-min(time.pts.daily))/ max(time.pts.daily)
+spline.daily = gam(AAPLDaily~s(time.pts.daily))
+spline.daily.fit = ts(fitted(spline.daily), start = c(2013,1,1), freq=252)
+plot(AAPLDaily, main = "daily stock close price")
+lines(spline.daily.fit, lwd=2, col="red")
 
 ```
 
 
 *Response: Weekly vs daily Time Series data trend fit* 
-
+There is no difference in trend between daily stock close price and weekly stock close price. In general, the trend line is increasing over time. 
 
 
 **1d.** Consider the return stock price computed as provided in the canvas homework assignment. 
@@ -98,10 +111,32 @@ Apply this formula to compute the return price based on the daily and weekly tim
 
 *Analyzing weekly and daily return data and comparing with original data*
 ```{r}
+# the first index in the list is 0, so (t-1) is -1, which is the problem, if wants to calculate first return price, we have to use (i+1)'location - i'location
+weekly.return.formular = rep(0,length(AAPLWeekly))
 
+for( i in 1:length(AAPLWeekly)){
+  weekly.return.formular[i] = (AAPLWeekly[i+1] - AAPLWeekly[i])/AAPLWeekly[i]
+}
+
+weekly.return = ts(weekly.return.formular, start = c(2013,1,1), freq = 52.18)
+plot(weekly.return, main = " weekly return ")
+
+# use na.action = na.pass to handle missing value in acf.
+acf(weekly.return, main="ACF of weekly return",  na.action = na.pass)
+
+
+daily.return.formular = rep(0, length(AAPLDaily))
+for (j in 1:length(AAPLDaily)) {
+  daily.return.formular[j] = (AAPLDaily[j+1] - AAPLDaily[j]) / AAPLDaily[j]
+}
+daily.return = ts(daily.return.formular, start = c(2013,1,1), freq=252)
+plot(daily.return, main="daily return")
+acf(daily.return, main="ACF of daily return", na.action = na.pass, max.lag=400)
 
 ```
 *Response: Return series vs price series analysis* 
+
+Both plots of daily return and weekly return stock price have exhibit a non constant variance, this violates stationary that variance needs to be constant. From the ACF of weekly return, most of lags are out of confidence band, implies autocorrelation, a serial dependence, whereas the daily return acf plot, all lags are within confidence band,indicating a uncorrelated relation. 
 
 
 #Question 2: ARIMA(p,d,q) for Stock Price
