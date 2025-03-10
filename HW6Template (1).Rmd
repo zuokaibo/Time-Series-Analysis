@@ -145,7 +145,7 @@ Both plots of daily return and weekly return stock price have exhibit a non cons
 
 ```{r}
 # the last excluding date from 26th to 30th , four days. 
-excluding.date = 4 
+excluding.date = 5 
 new.daily = AAPLDaily
 dailystock.train = new.daily[1:(length(new.daily)-excluding.date)]
 dailystock.test = new.daily[(length(new.daily) - excluding.date + 1) : length(new.daily)]
@@ -375,8 +375,13 @@ In both prediction model, no predicted value is out of prediction band. About va
 
 **3a.** Divide the data into training and testing data set, where the training data exclude the last week of data (Aug 26th-Aug 30th) with the testing data including the last week of data. Apply the iterative model to fit an ARMA(p,q)-GARCH(m,n) model by selecting the orders for p & q up to 5 and orders for m & n up to 2. Display the summary of the final model fit. Write up the equation of the estimated model. Use both the daily as well as the weekly data.
 
-
 ```{r}
+dates.removed = 5
+
+daily.ts = ts(head(new.daily, -1), start =c(2013,1,1), freq = 252)
+
+daily.train = daily.ts[1: (length(daily.ts) - dates.removed)]
+daily.test = daily.ts[(length(daily.ts) - dates.removed +1) : length(daily.ts)]
 
 
 ```
