@@ -380,12 +380,99 @@ dates.removed = 5
 
 daily.ts = ts(head(new.daily, -1), start =c(2013,1,1), freq = 252)
 
-daily.train = daily.ts[1: (length(daily.ts) - dates.removed)]
-daily.test = daily.ts[(length(daily.ts) - dates.removed +1) : length(daily.ts)]
+daily.training = daily.ts[1: (length(daily.ts) - dates.removed)]
+daily.testing = daily.ts[(length(daily.ts) - dates.removed +1) : length(daily.ts)]
 
+# reference, lecture notes
+# find values of m and n
+final.bic = Inf
+final.order = c(0,0)
+
+model.test.garch = function(m, n) {
+  spec = ugarchspec(variance.model = list(garchOrder = c(m, n)), mean.model = list(armaOrder=c(5,5),include.mean = T), distribution.model = "std")
+  fit = ugarchfit(spec, daily.training, solver= "hybrid")
+  current.bic = infocriteria(fit)[2]
+  bicdata = data.frame(m,n,current.bic)
+  names(bicdata) = c("m","n","BIC")
+  print(paste(m,n,current.bic, sep=" "))
+  return(bicdata)
+}
+
+orders = data.frame(Inf, Inf, Inf)
+names(orders) = c("m", "n", "BIC")
+for (m in 0:2) for (n in 0:2) {
+  Error = tryCatch(orders = rbind(orders, model.test.garch(m, n)), error = function(e) e) 
+  if (inherits(Error, "error"))
+    next
+}
 
 ```
 
+```{r}
+# find values of p and q , since smallest bic value is 5.6108 with m = 1, n = 1
+test.model.arma = function(p, q) {
+  spec = ugarchspec(variance.model = list(garchOrder = c(1,1)), mean.model = list(armaOrder = c(p,q), include.mean=T), distribution.model = "std")
+  fit = ugarchfit(spec, daily.training, solver="hybrid")
+  current.bic = infocriteria(fit)[2]
+  bic.arma = c("p","q", "BIC")
+  print(paste(p, q, current.bic, sep=" "))
+  return(bic.arma)
+}
+
+orders.arma = data.frame(Inf, Inf, Inf)
+names(orders.arma) = c("p","q","BIC")
+for (p in 0:5) for (q in 0:5) {
+  Error = tryCatch(orders.arm = rbind(orders.arma, test.model.arma(p, q)), error = function(e) e) 
+  if (inherits(Error, "error"))
+    next
+}
+
+```
+
+```{r}
+# refine garch
+test.model.arma = function(p, q) {
+  spec = ugarchspec(variance.model = list(garchOrder = c(m,n)), mean.model = list(armaOrder = c(1,1), include.mean=T), distribution.model = "std")
+  fit = ugarchfit(spec, daily.training, solver="hybrid")
+  current.bic = infocriteria(fit)[2]
+  bic.arma = c("p","q", "BIC")
+  print(paste(p, q, current.bic, sep=" "))
+  return(bic.arma)
+}
+
+orders.arma = data.frame(Inf, Inf, Inf)
+names(orders.arma) = c("p","q","BIC")
+for (p in 0:5) for (q in 0:5) {
+  Error = tryCatch(orders.arm = rbind(orders.arma, test.model.arma(p, q)), error = function(e) e) 
+  if (inherits(Error, "error"))
+    next
+}
+```
+
+```{r}
+#final m,n, p, q values
+# one model with garch order 1,1, arma order 0,0
+spec.one = ugarchspec(variance.model = list(garchOrder = c(1, 1)), mean.model = list(armaOrder=c(0,0),include.mean = T), distribution.model = "std")
+model.one = ugarchfit(spec.one, daily.training, solver = "hybrid")
+infocriteria(model.one)
+
+# second model with garch order 1,1, arma order 5,5
+spec.two = ugarchspec(variance.model = list(garchOrder = c(1, 1)), mean.model = list(armaOrder=c(5,5),include.mean = T), distribution.model = "std")
+model.two = ugarchfit(spec.two, daily.training, solver = "hybrid")
+infocriteria(model.two)
+
+
+spec.three = ugarchspec(variance.model = list(garchOrder = c(2, 2)), mean.model = list(armaOrder=c(0,0),include.mean = T), distribution.model = "std")
+model.three = ugarchfit(spec.three, daily.training, solver = "hybrid")
+infocriteria(model.three)
+
+
+spec.four = ugarchspec(variance.model = list(garchOrder = c(2, 2)), mean.model = list(armaOrder=c(2,1),include.mean = T), distribution.model = "std")
+model.four = ugarchfit(spec.four, daily.training, solver = "hybrid")
+infocriteria(model.four)
+
+
+```
 *Response: Analysis of the ARMA GARCH Fit for the Weekly and daily Data* 
 
 
@@ -395,6 +482,23 @@ daily.test = daily.ts[(length(daily.ts) - dates.removed +1) : length(daily.ts)]
 
 
 ```{r}
+# find values of p and q , since smallest bic value is 5.6108 with m = 1, n = 1
+test.model.arma = function(p, q) {
+  spec = ugarchspec(variance.model = list(garchOrder = c(1,1)), mean.model = list(armaOrder = c(p,q), include.mean=T), distribution.model = "std")
+  fit = ugarchfit(spec, daily.training, solver="hybrid")
+  current.bic = infocriteria(fit)[2]
+  bic.arma = c("p","q", "BIC")
+  print(paste(p, q, current.bic, sep=" "))
+  return(bic.arma)
+}
+
+orders.arma = data.frame(Inf, Inf, Inf)
+names(orders.arma) = c("p","q","BIC")
+for (p in 0:5) for (q in 0:5) {
+  Error = tryCatch(orders.arm = rbind(orders.arma, test.model.arma(p, q)), error = function(e) e) 
+  if (inherits(Error, "error"))
+    next
+}
 
 
 ```
