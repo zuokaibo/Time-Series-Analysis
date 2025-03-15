@@ -1,5 +1,5 @@
 ---
-title: "ISYE 6402 Homework 6"
+title: "Homework6"
 output:
   html_document: default
   pdf_document: default
@@ -400,6 +400,7 @@ model.test.garch = function(m, n) {
 
 orders = data.frame(Inf, Inf, Inf)
 names(orders) = c("m", "n", "BIC")
+
 for (m in 0:2) for (n in 0:2) {
   Error = tryCatch(orders = rbind(orders, model.test.garch(m, n)), error = function(e) e) 
   if (inherits(Error, "error"))
@@ -616,33 +617,148 @@ From p values in both daily and weekly stock close price time series, about resi
 
 **3c.** Apply the model identified in (3a) and forecast the mean and the variance of the last week of data. Plot the predicted data to compare the predicted values to the actual observed ones. Include 95% confidence intervals for the forecasts (mean only) in the corresponding plots. Interpret the results, particularly comparing forecast using daily versus weekly data.
 
+```{r}
+## 1. Prediction of the return time series
+## 2. Prediction of the volatility
+nfore = length(daily.testing)
+fore.series.1 = NULL
+fore.sigma.1 = NULL
+fore.series.2 = NULL
+fore.sigma.2 = NULL
+fore.series.3 = NULL
+fore.sigma.3 = NULL
+#for(f in 1: nfore){
+    ## Fit models
+#    data = daily.train
+#    if(f>2)
+#       data = c(daily.training,daily.testing[1:(f-1)])
+    
+#    model.two = ugarchfit(spec.two, data, solver = 'hybrid')
+#    model.four = ugarchfit(spec.four, data, solver = 'hybrid')
+#    model.five = ugarchfit(spec.five, data, solver = 'hybrid')
+    ## Forecast
+#    fore = ugarchforecast(model.two, n.ahead=1)
+#    fore.series.1 = c(fore.series.1, fore@forecast$seriesFor)
+#    fore.sigma.1 = c(fore.sigma.1, fore@forecast$sigmaFor)
+    
+#    fore = ugarchforecast(model.four, n.ahead=1)
+#    fore.series.2 = c(fore.series.2, fore@forecast$seriesFor)
+#    fore.sigma.2 = c(fore.sigma.2, fore@forecast$sigmaFor)
+    
+#    fore = ugarchforecast(model.five, n.ahead=1)
+#    fore.series.3 = c(fore.series.3, fore@forecast$seriesFor)
+#    fore.sigma.3 = c(fore.sigma.3, fore@forecast$sigmaFor)
+#}
+
+#ymin = 
+#min(c(as.vector(daily.testing),fore.series.1,fore.series.2,fore.series.3), na.rm 
+#= T) 
+#ymax = 
+#max(c(as.vector(daily.testing),fore.series.1,fore.series.2,fore.series.3), na.rm 
+#= T) 
+#data.plot = daily.testing 
+#names(data.plot)="Fore" 
+#n=length(daily.ts) 
+#time.series = daily.ts[c(n-90):n]
+
+```
+
 
 ```{r}
+nfore = length(weekly.testing) 
+w_fore.series.1 = NULL 
+w_fore.sigma.1 = NULL 
+w_fore.series.2 = NULL 
+w_fore.sigma.2 = NULL 
+w_fore.series.3 = NULL 
+w_fore.sigma.3 = NULL 
+for(f in 1: nfore){ 
+    ## Fit models 
+    data = weekly.training 
+    if(f>2) 
+       data = c(weekly.training,weekly.testing[1:(f-1)]) 
+    model.one.week = ugarchfit(spec.one.week, data, solver = 'hybrid') 
+    model.two.week = ugarchfit(spec.two.week, data, solver = 'hybrid') 
+    
+    ## Forecast 
+    fore = ugarchforecast(model.one.week, n.ahead=1) 
+    w_fore.series.1 = c(w_fore.series.1, fore@forecast$seriesFor) 
+    w_fore.sigma.1 = c(w_fore.sigma.1, fore@forecast$sigmaFor) 
+    
+    fore = ugarchforecast(model.two.week, n.ahead=1) 
+    w_fore.series.2 = c(w_fore.series.2, fore@forecast$seriesFor) 
+    w_fore.sigma.2 = c(w_fore.sigma.2, fore@forecast$sigmaFor) 
+  
+} 
+## Compare squared observed time series with variance forecasts 
+ymin = 
+min(c(as.vector(weekly.testing),w_fore.series.1,w_fore.series.2)
+ , na.rm = T) 
+ymax = 
+max(c(as.vector(weekly.testing),w_fore.series.1,w_fore.series.2)
+ , na.rm = T) 
+data.plot = weekly.testing 
+names(data.plot)="Fore" 
+n=length(weekly.ts) 
+time.series = weekly.ts[c(n-90):n]
+
+#plot(time.series,type="l", ylim=c(ymin,ymax), xlab="Time", ylab="Return 
+#Price") 
+#data.plot$Fore=fore.series.1
+#points(data.plot,lwd= 2, col="blue")
+#data.plot$Fore=fore.series.2
+#points(data.plot,lwd= 2, col="brown")
 
 ```
 
 *Response: Interpretation of the results*
 
-
-
 **3d.** Calculate Mean Absolute Percentage Error (MAPE) and Precision Measure (PM) for the mean forecasts (PM should not be calculated for weekly data).  Compare the accuracy of the predictions for the daily and weekly time series using these two measures. Compare the accuracy of the forecasts with those obtained in (2d). Interpret the results.
 
 ```{r}
+#daily, i did not get prediction on daily
+### Mean Absolute Percentage Error (MAPE)
+mean(abs(fore.series.1 - daily.testing)/abs(daily.testing))
+### Precision Measure (PM)
+sum((fore.series.1 - daily.testing)^2)/sum((daily.testing-mean(daily.testing))^2)
 
+#weekly
+mean(abs(w_fore.series.1 - weekly.testing)/abs(weekly.testing))
+mean(abs(w_fore.series.2 - weekly.testing)/abs(weekly.testing))
 
 ```
-
 *Response: Model comparison * . 
+From the result, MAPE in weekly date, both values are similarly small, but still a little bigger than the MAPE value based on 2d. In that case, the model built in 2d is better which explained more variability. 
+
 
 **3e**  Use the ARMA model in 3a to fit with Exponential GARCH (E-GARCH) model, and analyze the News Impact Curve. Fit E-GARCH(1,1) model to the datasets. Display the summary of the final model fit Use both the daily as well as the weekly data. Generate the News Impact Curve based on the fitted model and discuss its implications for asymmetry in volatility.
 
 *Response:*
+```{r}
+#weekly data
+week.egarch = ugarchspec(variance.model = list(model = "eGARCH", garchOrder = c(1, 1)), mean.model = list(armaOrder=c(5,5),include.mean = T), distribution.model = "std")
+week.egarch.fit = ugarchfit(week.egarch, weekly.training, solver = "hybrid")
+#to check all options
+#plot(week.egarch.fit)
+#news.weekly = newsimpact(week.egarch.fit)
+#plot(news.weekly$)
+
+```
+
+```{r}
+#daily data
+daily.egarch = ugarchspec(variance.model = list(model = "eGARCH", garchOrder = c(0, 0)), mean.model = list(armaOrder=c(2,1),include.mean = T), distribution.model = "std")
+daily.egarch.fit= ugarchfit(daily.egarch, daily.ts, solver = "hybrid")
+news.daily = newsimpact(daily.egarch.fit)
+
+```
+
 
 #Question 4: Reflection on the Modeling and Forecasting 
 
 Based on the analysis above, discuss the application of ARIMA on the stock price versus the application of ARMA-GARCH on the stock return. How do the models fit the data? How well do the models predict?  How do the models perform when using daily versus weekly data? Would you use one approach over another for different settings? What are some specific points of caution one would need to consider when applying those models?
 
 *Response: Final considerations*
+(1)If only do an analysis on weekly data, I would prefer ARIMA model to do prediction on long term value of the stock price because of the window period has a bias-variance trade off advantage,meaning that I would use ARIMA model do an analysis on more smoothed data. Whereas for daily data, I would prefer ARMA-GARCH joint model to catch more accurate variations.
 
-
-
+(2)In our case, since the time period covers period of Corona, we need to be aware of the outliers that introduced due to this special external events using ARMA-GARCH model, which may lead to an overestimation on the prediction of stock price. 
