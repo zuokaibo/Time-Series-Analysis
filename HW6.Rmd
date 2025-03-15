@@ -1,0 +1,764 @@
+---
+title: "Homework6"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include = FALSE}
+
+# Set up the default parameters
+# 1. The code block will be shown in the document
+# 2. set up figure display size
+# 3. turn off all the warnings and messages
+
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.width = 8, fig.height = 4)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+
+## Background
+
+Individuals stock prices tend to exhibit high amounts of non-constant variance, and thus ARIMA models built upon that data would likely exhibit non-constant variance in residuals. In this problem we are going to analyze the Apple stock price data from January 2013 through end of August 2024. We will use the ARIMA-GARCH to model daily and weekly stock price (adjusted close price at the end of a day for daily data or at the end of the week for weekly data), with a focus on the behavior of its volatility as well as forecasting both the price and the volatility.
+
+##Data import and cleaning
+
+```{r cars}
+## Libraries used within this homework are uploaded here
+library(zoo,warn.conflicts=FALSE)
+library(lubridate,warn.conflicts=FALSE)
+library(mgcv,warn.conflicts=FALSE)
+library(rugarch,warn.conflicts=FALSE)
+library(xts,warn.conflicts=FALSE)
+
+```
+
+```{r}
+#importing the data
+dailydata <- read.csv("Daily_AAPL_data-1.csv", head = TRUE)
+weeklydata <- read.csv("Weekly_AAPL_data-2.csv", head = TRUE)
+
+#cleaning the data
+
+#dates to date format
+weeklydata$Date<-as.Date(weeklydata$date,format='%Y-%m-%d')
+dailydata$Date<-as.Date(dailydata$date,format='%Y-%m-%d')
+
+##data through end-August 2024
+weeklydata <- weeklydata[weeklydata$Date <= "2024-08-27",]
+dailydata <- dailydata[dailydata$Date <= "2024-08-30", ]
+
+##get trading days
+#daily_days <- as.Date(dailydata$Date)
+#weekly_days <- as.Date(weeklydata$Date)
+
+#prices to timeseries format
+AAPLWeekly <- ts(weeklydata$close, start=c(2013,1,1),freq=52.18)
+AAPLDaily <- ts(dailydata$close, start=c(2013,1,1),freq=252)
+ 
+```
+
+
+#Question 1: Exploratory Data Analysis 
+
+**1a.** Based on your intuition, when would you use daily vs weekly stock price data?
+
+The difference between daily stock price data and weekly stock data is daily stock price gives more detailed information on the stock price since the trading happens every minutes and it is also an indication of the trend in next day in general, however, weekly data gives a window period where variance and bias is traded off since it has smoothened the small changes of daily stock price variability, it implies a little bit further trend than daily stock price. 
+
+
+**1b.** Plot the time series plots comparing daily vs weekly data. How do the daily vs weekly time series data compare?
+
+```{r}
+plot(AAPLWeekly)
+plot(AAPLDaily)
+```
+
+*Response: Weekly vs daily Time Series data comparison* 
+ 
+A similar non-linear trend has exhibited in both daily stock price and weekly stock price datasets. In general, the trend line is increasing overtime in both plots. the price from 2013 has gradually smoothly increased until 2022, then fluctuation in the trend started appearing more often than the past period, probably due to variability in the industrial recovery from Corona.  
+
+
+
+**1c.** Fit a non-parametric trend using splines regression to both the daily and weekly time series data. Overlay the fitted trends. How do the trends compare?
+
+*Analyzing weekly and daily data with trend fitting*
+```{r}
+time.pts.weekly = c(1:length(AAPLWeekly))
+time.pts.weekly = c(time.pts.weekly - min(time.pts.weekly)) / max(time.pts.weekly)
+spline.weekly = gam(AAPLWeekly~s(time.pts.weekly))
+spline.weekly.fit = ts(fitted(spline.weekly), start=c(2013,1,1), freq=52.18)
+plot(AAPLWeekly, main = "weekly stock close price")
+lines(spline.weekly.fit, lwd=2, col="blue")
+
+
+time.pts.daily = c(1:length(AAPLDaily))
+time.pts.daily = c(time.pts.daily-min(time.pts.daily))/ max(time.pts.daily)
+spline.daily = gam(AAPLDaily~s(time.pts.daily))
+spline.daily.fit = ts(fitted(spline.daily), start = c(2013,1,1), freq=252)
+plot(AAPLDaily, main = "daily stock close price")
+lines(spline.daily.fit, lwd=2, col="red")
+
+```
+
+
+*Response: Weekly vs daily Time Series data trend fit* 
+There is no difference in trend between daily stock close price and weekly stock close price. In general, the trend line is increasing over time. 
+
+
+**1d.** Consider the return stock price computed as provided in the canvas homework assignment. 
+Apply this formula to compute the return price based on the daily and weekly time series data. Plot the return time series and their corresponding ACF plots. How do the return time series compare in terms of stationarity and serial dependence?
+
+*Analyzing weekly and daily return data and comparing with original data*
+```{r}
+# the first index in the list is 0, so (t-1) is -1, which is the problem, if wants to calculate first return price, we have to use (i+1)'location - i'location
+weekly.return.formular = rep(0,length(AAPLWeekly))
+
+for( i in 1:length(AAPLWeekly)){
+  weekly.return.formular[i] = (AAPLWeekly[i+1] - AAPLWeekly[i])/AAPLWeekly[i]
+}
+
+weekly.return = ts(weekly.return.formular, start = c(2013,1,1), freq = 52.18)
+plot(weekly.return, main = " weekly return ")
+
+# use na.action = na.pass to handle missing value in acf.
+acf(weekly.return, main="ACF of weekly return",  na.action = na.pass)
+
+
+daily.return.formular = rep(0, length(AAPLDaily))
+for (j in 1:length(AAPLDaily)) {
+  daily.return.formular[j] = (AAPLDaily[j+1] - AAPLDaily[j]) / AAPLDaily[j]
+}
+daily.return = ts(daily.return.formular, start = c(2013,1,1), freq=252)
+plot(daily.return, main="daily return")
+acf(daily.return, main="ACF of daily return", na.action = na.pass, lag.max =260)
+
+```
+*Response: Return series vs price series analysis* 
+
+Both plots of daily return and weekly return stock price have exhibit a non constant variance, this violates stationary that variance needs to be constant. From the ACF of weekly return, most of lags are out of confidence band, implies autocorrelation, a serial dependence, whereas the daily return acf plot, almost all lags are within confidence band,indicating a uncorrelated relation. 
+
+
+#Question 2: ARIMA(p,d,q) for Stock Price
+
+**2a.** Divide the data into training and testing data set, where the training data exclude the last week of data (Aug 26th-Aug 30th) with the testing data including the last week of data. Apply the iterative model to fit an ARIMA(p,d,q) model with max AR and MA orders of 7 and difference orders 1 and 2 separately to the training datasets of the daily and weekly data. Display the summary of the final model fit.
+
+```{r}
+# the last excluding date from 26th to 30th , four days. 
+excluding.date = 5 
+new.daily = AAPLDaily
+dailystock.train = new.daily[1:(length(new.daily)-excluding.date)]
+dailystock.test = new.daily[(length(new.daily) - excluding.date + 1) : length(new.daily)]
+# reference: lecture notes from module 2
+n = length(dailystock.train)
+norder = 7
+p = c(1:norder)-1
+q = c(1:norder)-1
+
+aic = matrix(0, norder, norder)
+
+# differencing with order 1
+for (i in 1:norder) {
+  for (j in 1:norder) {
+    modij = arima(dailystock.train, order=c(p[i], 1, q[j]), method = "ML", include.mean = FALSE)
+    aic[i, j] = modij$aic + 2 * (p[i] + q[j] +1)  * (p[i] + q[j]) / (n - p[i] - q[j] - 1)
+  } 
+}
+
+indexp = rep(c(1:norder),norder)
+indexq = rep(c(1:norder),each=norder)
+indexaic = which(aic == min(aic))
+porder = indexp[indexaic]-1
+qorder = indexq[indexaic]-1
+porder 
+qorder
+
+daily.final.diff.one = arima(dailystock.train, order = c(porder, 1, qorder), method = "ML")
+daily.final.diff.one
+
+#differencing with order 2
+for (i in 1:norder) {
+  for (j in 1:norder) {
+    modij = arima(dailystock.train, order=c(p[i], 2, q[j]), method = "ML", include.mean = FALSE)
+    aic[i, j] = modij$aic + 2 * (p[i] + q[j] +1)  * (p[i] + q[j]) / (n - p[i] - q[j] - 1)
+  } 
+}
+
+indexp = rep(c(1:norder),norder)
+indexq = rep(c(1:norder),each=norder)
+indexaic = which(aic == min(aic))
+porder = indexp[indexaic]-1
+qorder = indexq[indexaic]-1
+porder 
+qorder
+
+daily.final.diff.two = arima(dailystock.train, order = c(porder, 2, qorder), method = "ML")
+daily.final.diff.two
+
+daily.aic.diff.one = round(daily.final.diff.one$aic, 3)
+daily.aic.diff.two = round(daily.final.diff.two$aic, 3)
+
+```
+
+
+```{r}
+#finding best p and q value on weekly stock close price data
+new.weekly = AAPLWeekly
+weeklystock.train = new.weekly[1:(length(new.weekly)-excluding.date)]
+weeklystock.test = new.weekly[(length(new.weekly) - excluding.date + 1) : length(new.weekly)]
+
+#differencing order is 1 on weekly stock close price
+n = length(weeklystock.train)
+norder = 7
+p = c(1:norder)-1
+q = c(1:norder)-1
+
+aic = matrix(0, norder, norder)
+
+# differencing with order 1
+for (i in 1:norder) {
+  for (j in 1:norder) {
+    modij = arima(weeklystock.train, order=c(p[i], 1, q[j]), method = "ML", include.mean = FALSE)
+    aic[i, j] = modij$aic + 2 * (p[i] + q[j] +1)  * (p[i] + q[j]) / (n - p[i] - q[j] - 1)
+  } 
+}
+
+indexp = rep(c(1:norder),norder)
+indexq = rep(c(1:norder),each=norder)
+indexaic = which(aic == min(aic))
+porder = indexp[indexaic]-1
+qorder = indexq[indexaic]-1
+porder 
+qorder
+
+weekly.final.diff.one = arima(weeklystock.train, order = c(porder, 1, qorder), method = "ML")
+weekly.final.diff.one
+
+#differencing with order 2
+for (i in 1:norder) {
+  for (j in 1:norder) {
+    modij = arima(weeklystock.train, order=c(p[i], 2, q[j]), method = "ML", include.mean = FALSE)
+    aic[i, j] = modij$aic + 2 * (p[i] + q[j] +1)  * (p[i] + q[j]) / (n - p[i] - q[j] - 1)
+  } 
+}
+
+indexp = rep(c(1:norder),norder)
+indexq = rep(c(1:norder),each=norder)
+indexaic = which(aic == min(aic))
+porder = indexp[indexaic]-1
+qorder = indexq[indexaic]-1
+porder 
+qorder
+
+weekly.final.diff.two = arima(weeklystock.train, order = c(porder, 2, qorder), method = "ML")
+weekly.final.diff.two
+
+aic.diff.one = round(weekly.final.diff.one$aic, 3)
+aic.diff.two = round(weekly.final.diff.two$aic, 3)
+
+```
+
+
+*Response: Analysis of the ARIMA Fit for the weekly and daily Data* 
+
+(1)When using test daily stock close price data to find best p and q with differecing order 1, the best p value is 6, best q value is 3, however when differencing order is 2, the best p value is 0 and q value is 2. the aic of differencing order 1 is slightly lower than differncing order being 2. so I would use p = 6, d = 1, and q = 3 as final model in daily stock close price data
+
+(2)When using test weekly stock close price data to find best p and q with differencing order 1, the best p value is 5, best q value is 5 too, whereas when differencing order is 2, the best p value is 1 and q value is 2, which is same as the values in daily stock close price. aic from differencing order being 2 is alittle lower, so I would use differencing order being 2, p being 0 and q being 2 as final model in weekly stock close price data.
+
+
+**2b.** Evaluate the model residuals and squared residuals using the ACF and PACF plots as well as hypothesis testing for serial correlation for both daily and weekly data. What would you conclude based on this analysis?
+
+```{r}
+# daily residual 
+daily.resid = resid(daily.final.diff.one)
+plot(daily.resid, main = "daily residual plot")
+acf(daily.resid, main = " daily residual ACF")
+pacf(daily.resid, main = "daily residual PACF")
+Box.test(daily.resid, lag = ( 6+3+1), type = "Ljung-Box", fitdf = (6+3))
+
+# weekly residual
+weekly.resid = resid(weekly.final.diff.two)
+plot(weekly.resid, main = "weekly residual plot")
+acf(weekly.resid, main = " weekly residual ACF")
+pacf(weekly.resid, main = "weekly residual PACF")
+Box.test(daily.resid, lag = ( 0 + 2 +1), type = "Ljung-Box", fitdf = (0+2))
+
+```
+
+*Response:ARIMA residual analysis for the Weekly and daily Data*
+It is different to distingush which model is better to fit the data from residual plot or ACF plots, since in acf plot, all lags in both weekly and daily data are all within confidence band, indicating uncorrelation, but from pacf, there are some lags are outside of confidence band in weekly data, it probably because it is 95% confidence band, so there are 5% of lags would be outside of band. But from p values of both model, they all quite big, null hypo of Ljung Box test is that the data are uncorrelated against they are correlated, so from the p value, the test indicates they are uncorrelated. 
+
+
+
+**2c.** Apply the model identified in (2a) and forecast the last week of data using both daily and weekly data. Plot the predicted data to compare the predicted values to the actual observed ones. Include 95% confidence intervals for the forecasts in the corresponding plots.
+
+```{r}
+# prediction on weekly stock close price 
+n = length(new.weekly)
+n.train = length(weeklystock.train)
+n.pred = n - n.train
+
+prediction = predict(weekly.final.diff.two, n.ahead = n.pred)
+
+upperbound = prediction$pred + 1.96*prediction$se
+lowerbound = prediction$pred - 1.96*prediction$se
+
+plot(index(AAPLWeekly)[(n-n.pred-4):n], new.weekly[(n-n.pred - 4) :n], type = "l", ylim = c(min(lowerbound), max(upperbound)), xlab="prediction on test data(weekly)", ylab="weekly stock close price")
+points((index(AAPLWeekly))[(n.train + 1):n], prediction$pred, col="blue")
+lines((index(AAPLWeekly))[(n.train + 1):n], upperbound, lty = 2, lwd = 2, col = "red")
+lines((index(AAPLWeekly))[(n.train + 1):n], lowerbound, lty = 2, lwd = 2, col = "red")
+
+
+#predciton on daily stock close price 
+
+n.daily = length(new.daily)
+n.train.daily = length(dailystock.train)
+n.pred.daily = n.daily - n.train.daily
+
+prediction.daily = predict(daily.final.diff.one, n.ahead = n.pred.daily)
+
+upperbound.daily = prediction.daily$pred + 1.96*prediction.daily$se
+lowerbound.daily = prediction.daily$pred - 1.96*prediction.daily$se
+
+plot(index(AAPLDaily)[(n.daily-n.pred.daily-4):n.daily], new.daily[(n.daily-n.pred.daily - 4):n.daily], type = "l", ylim = c(min(lowerbound.daily), max(upperbound.daily)),xlab="prediction on test data(daily)", ylab="daily stock close price")
+points((index(AAPLDaily))[(n.train.daily + 1):n.daily], prediction.daily$pred, col="blue")
+lines((index(AAPLDaily))[(n.train.daily + 1):n.daily], upperbound.daily, lty = 2, lwd = 2, col = "red")
+lines((index(AAPLDaily))[(n.train.daily + 1):n.daily], lowerbound.daily, lty = 2, lwd = 2, col = "red")
+
+
+```
+*Response: Predictions*
+
+
+
+**2d.** Calculate Mean Absolute Percentage Error (MAPE) and Precision Measure (PM) (PM only for daily data). How many observations are within the prediction bands? Compare the accuracy of the predictions for the daily and weekly time series using these two measures. 
+
+```{r}
+# daily 
+true.daily = as.vector (new.daily[(n.train.daily + 1) : n.daily])
+
+mape.daily = mean(abs(prediction.daily$pred-true)/ true)
+print("MAPE of daily stock close price")
+mape.daily
+
+pm.daily = (sum(prediction.daily$pred-true)^2)/(sum(true - mean(true))^2)
+print("PM of daily stock close price")
+pm.daily
+
+print("How many observations are within PI in daily stock close price prediction")
+number.daily = (sum(true < upperbound.daily) & sum(true > lowerbound.daily))
+number.daily
+
+#weekly
+true.weekly = as.vector (new.weekly[(n.train + 1) : n])
+
+mape.weekly = mean(abs(prediction$pred-true.weekly)/ true.weekly)
+print("MAPE of weekly stock close price")
+mape.weekly
+
+pm.weekly = (sum(prediction$pred-true.weekly)^2)/(sum(true.weekly - mean(true.weekly))^2)
+print("PM of weekly stock close price")
+pm.weekly
+
+print("How many observations are within PI in weekly stock close price prediction")
+number.weekly = (sum(true < upperbound.daily) & sum(true > lowerbound.daily))
+number.weekly
+
+```
+
+*Response: Prediction Comparison* 
+In both prediction model, no predicted value is out of prediction band. About value of MAPE and PM, the value is smaller, the better model is, since the accuracy is (1-value of MAPE or PM)*100%.So from the MAPE , PM value, the model that fits weekly stock close price is better comparing to the model derived from daily stock close price. But since the values of MAPE, PM both are not too small, I conclude that no models fit the data well enough. 
+
+
+
+#Question 3: ARMA(p,q)-GARCH(m,n) for Return Stock Price 
+
+**3a.** Divide the data into training and testing data set, where the training data exclude the last week of data (Aug 26th-Aug 30th) with the testing data including the last week of data. Apply the iterative model to fit an ARMA(p,q)-GARCH(m,n) model by selecting the orders for p & q up to 5 and orders for m & n up to 2. Display the summary of the final model fit. Write up the equation of the estimated model. Use both the daily as well as the weekly data.
+
+```{r}
+dates.removed = 5
+
+daily.ts = ts(head(new.daily, -1), start =c(2013,1,1), freq = 252)
+
+daily.training = daily.ts[1: (length(daily.ts) - dates.removed)]
+daily.testing = daily.ts[(length(daily.ts) - dates.removed +1) : length(daily.ts)]
+
+# reference, lecture notes
+# find values of m and n
+final.bic = Inf
+final.order = c(0,0)
+
+model.test.garch = function(m, n) {
+  spec = ugarchspec(variance.model = list(garchOrder = c(m, n)), mean.model = list(armaOrder=c(5,5),include.mean = T), distribution.model = "std")
+  fit = ugarchfit(spec, daily.training, solver= "hybrid")
+  current.bic = infocriteria(fit)[2]
+  bicdata = data.frame(m,n,current.bic)
+  names(bicdata) = c("m","n","BIC")
+  print(paste(m,n,current.bic, sep=" "))
+  return(bicdata)
+}
+
+orders = data.frame(Inf, Inf, Inf)
+names(orders) = c("m", "n", "BIC")
+
+for (m in 0:2) for (n in 0:2) {
+  Error = tryCatch(orders = rbind(orders, model.test.garch(m, n)), error = function(e) e) 
+  if (inherits(Error, "error"))
+    next
+}
+
+```
+
+```{r}
+# find values of p and q , since smallest bic value is 5.6108 with m = 1, n = 1
+test.model.arma = function(p, q) {
+  spec = ugarchspec(variance.model = list(garchOrder = c(1,1)), mean.model = list(armaOrder = c(p,q), include.mean=T), distribution.model = "std")
+  fit = ugarchfit(spec, daily.training, solver="hybrid")
+  current.bic = infocriteria(fit)[2]
+  bic.arma = c("p","q", "BIC")
+  print(paste(p, q, current.bic, sep=" "))
+  return(bic.arma)
+}
+
+orders.arma = data.frame(Inf, Inf, Inf)
+names(orders.arma) = c("p","q","BIC")
+for (p in 0:5) for (q in 0:5) {
+  Error = tryCatch(orders.arm = rbind(orders.arma, test.model.arma(p, q)), error = function(e) e) 
+  if (inherits(Error, "error"))
+    next
+}
+
+```
+
+```{r}
+# refine garch
+test.model.arma = function(p, q) {
+  spec = ugarchspec(variance.model = list(garchOrder = c(m,n)), mean.model = list(armaOrder = c(1,1), include.mean=T), distribution.model = "std")
+  fit = ugarchfit(spec, daily.training, solver="hybrid")
+  current.bic = infocriteria(fit)[2]
+  bic.arma = c("p","q", "BIC")
+  print(paste(p, q, current.bic, sep=" "))
+  return(bic.arma)
+}
+
+orders.arma = data.frame(Inf, Inf, Inf)
+names(orders.arma) = c("p","q","BIC")
+for (p in 0:5) for (q in 0:5) {
+  Error = tryCatch(orders.arm = rbind(orders.arma, test.model.arma(p, q)), error = function(e) e) 
+  if (inherits(Error, "error"))
+    next
+}
+```
+
+```{r}
+#final m,n, p, q values
+# one model with garch order 1,1, arma order 0,0
+spec.one = ugarchspec(variance.model = list(garchOrder = c(1, 1)), mean.model = list(armaOrder=c(0,0),include.mean = T), distribution.model = "std")
+model.one = ugarchfit(spec.one, daily.training, solver = "hybrid")
+infocriteria(model.one)
+
+# second model with garch order 1,1, arma order 5,5
+spec.two = ugarchspec(variance.model = list(garchOrder = c(1, 1)), mean.model = list(armaOrder=c(5,5),include.mean = T), distribution.model = "std")
+model.two = ugarchfit(spec.two, daily.training, solver = "hybrid")
+infocriteria(model.two)
+
+
+spec.three = ugarchspec(variance.model = list(garchOrder = c(1, 1)), mean.model = list(armaOrder=c(0,0),include.mean = T), distribution.model = "std")
+model.three = ugarchfit(spec.three, daily.training, solver = "hybrid")
+infocriteria(model.three)
+
+
+spec.four = ugarchspec(variance.model = list(garchOrder = c(2, 2)), mean.model = list(armaOrder=c(2,1),include.mean = T), distribution.model = "std")
+model.four = ugarchfit(spec.four, daily.training, solver = "hybrid")
+infocriteria(model.four)
+
+spec.five = ugarchspec(variance.model = list(garchOrder = c(0, 0)), mean.model = list(armaOrder=c(2,1),include.mean = T), distribution.model = "std")
+model.five = ugarchfit(spec.five, daily.training, solver = "hybrid")
+infocriteria(model.five)
+
+
+```
+
+```{r}
+# arma + garch model on weekly data
+dates.removed = 5
+
+weekly.ts = ts(head(new.weekly, -1), start =c(2013,1,1), freq = 52.18)
+
+weekly.training = weekly.ts[1: (length(weekly.ts) - dates.removed)]
+weekly.testing = weekly.ts[(length(weekly.ts) - dates.removed +1) : length(weekly.ts)]
+
+# reference, lecture notes
+# find values of m and n
+final.bic = Inf
+final.order = c(0,0)
+
+model.test.garch.week = function(m, n) {
+  spec = ugarchspec(variance.model = list(garchOrder = c(m, n)), mean.model = list(armaOrder=c(5,5),include.mean = T), distribution.model = "std")
+  fit = ugarchfit(spec, weekly.training, solver= "hybrid")
+  current.bic = infocriteria(fit)[2]
+  bicdata = data.frame(m,n,current.bic)
+  names(bicdata) = c("m","n","BIC")
+  print(paste(m,n,current.bic, sep=" "))
+  return(bicdata)
+}
+
+orders.arma = data.frame(Inf, Inf, Inf)
+names(orders.arma) = c("p","q","BIC")
+for (m in 0:2) for (n in 0:2) {
+  Error = tryCatch(orders.arm = rbind(orders.arma, test.model.arma.week(m, n)), error = function(e) e) 
+  if (inherits(Error, "error"))
+    next
+}
+
+```
+
+```{r}
+test.model.arma.week = function(p, q) {
+  spec = ugarchspec(variance.model = list(garchOrder = c(1,1)), mean.model = list(armaOrder = c(p,q), include.mean=T), distribution.model = "std")
+  fit = ugarchfit(spec, weekly.training, solver="hybrid")
+  current.bic = infocriteria(fit)[2]
+  bic.arma = c("p","q", "BIC")
+  print(paste(p, q, current.bic, sep=" "))
+  return(bic.arma)
+}
+
+orders.arma = data.frame(Inf, Inf, Inf)
+names(orders.arma) = c("p","q","BIC")
+for (p in 0:5) for (q in 0:5) {
+  Error = tryCatch(orders.arm = rbind(orders.arma, test.model.arma.week(p, q)), error = function(e) e) 
+  if (inherits(Error, "error"))
+    next
+}
+
+```
+
+
+```{r}
+# refine garch
+test.model.arma.week = function(p, q) {
+  spec = ugarchspec(variance.model = list(garchOrder = c(m,n)), mean.model = list(armaOrder = c(4,3), include.mean=T), distribution.model = "std")
+  fit = ugarchfit(spec, daily.training, solver="hybrid")
+  current.bic = infocriteria(fit)[2]
+  bic.arma = c("p","q", "BIC")
+  print(paste(p, q, current.bic, sep=" "))
+  return(bic.arma)
+}
+
+orders.arma = data.frame(Inf, Inf, Inf)
+names(orders.arma) = c("p","q","BIC")
+for (p in 0:5) for (q in 0:5) {
+  Error = tryCatch(orders.arm = rbind(orders.arma, test.model.arma.week(p, q)), error = function(e) e) 
+  if (inherits(Error, "error"))
+    next
+}
+
+```
+
+```{r}
+# selecting models with different orders' combination
+spec.one.week = ugarchspec(variance.model = list(garchOrder = c(1, 1)), mean.model = list(armaOrder=c(5,5),include.mean = T), distribution.model = "std")
+model.one.week = ugarchfit(spec.one.week, weekly.training, solver = "hybrid")
+infocriteria(model.one.week)
+
+spec.two.week = ugarchspec(variance.model = list(garchOrder = c(1, 1)), mean.model = list(armaOrder=c(4,3),include.mean = T), distribution.model = "std")
+model.two.week = ugarchfit(spec.two.week, weekly.training, solver = "hybrid")
+infocriteria(model.two.week)
+
+
+spec.three.week = ugarchspec(variance.model = list(garchOrder = c(0, 0)), mean.model = list(armaOrder=c(4,3),include.mean = T), distribution.model = "std")
+model.three.week = ugarchfit(spec.three, weekly.training, solver = "hybrid")
+infocriteria(model.three.week)
+
+spec.five.week = ugarchspec(variance.model = list(garchOrder = c(1, 1)), mean.model = list(armaOrder=c(0,0),include.mean = T), distribution.model = "std")
+model.five.week = ugarchfit(spec.five.week, weekly.training, solver = "hybrid")
+infocriteria(model.five.week)
+```
+
+*Response: Analysis of the ARMA GARCH Fit for the Weekly and daily Data* 
+(1) From the criteria, there are three models have similar result, since less complex model, the better it is, I would choose the model with arma order being 2 and 1, garch order being 0,0. 
+(2) About weekly stock close price, from the criteria, I prefer cleaner model with garch order being 1 and 1, arma order being 5 and 5. 
+
+
+**3b.** Evaluate the model residuals and squared residuals using the ACF and PACF plots as well as hypothesis testing for serial correlation. What would you conclude based on this analysis?
+
+```{r}
+# residuals analysis from daily data
+resids.daily = residuals(model.five) 
+
+acf(resids.daily, main ="Daily ACF: Residuals") 
+pacf(resids.daily, main ="Daily PACF: Residuals") 
+acf(resids.daily^2, main ="Daily ACF: Squared Residuals") 
+pacf(resids.daily^2, main ="Daily PACF: Squared Residuals")
+
+# Hypo test
+Box.test(resids.daily, lag = 10, type = "Ljung-Box")
+Box.test(resids.daily^2, lag = 10, type = "Ljung-Box")
+
+```
+
+```{r}
+#residual analysis on weekly stock close price
+resids.weekly = residuals(model.one.week) 
+
+acf(resids.weekly, main ="Weekly ACF: Residuals") 
+pacf(resids.weekly, main ="Weekly PACF: Residuals") 
+acf(resids.weekly^2, main ="Weekly ACF: Squared Residuals") 
+pacf(resids.weekly^2, main ="Weekly PACF: Squared Residuals")
+
+# Hypo test
+Box.test(resids.weekly, lag = 10, type = "Ljung-Box")
+Box.test(resids.weekly^2, lag = 10, type = "Ljung-Box")
+```
+
+*Response:ARIMA residual analysis for the Weekly and daily Data*
+From p values in both daily and weekly stock close price time series, about residual, p values are all bigger than 0.05, indication of uncorrelated relation. But p values on squared residual, both are much smaller than 0.05, indicating a correlation existence. those relations also have been exhibited in ACF and PACF plots of both residual and squared residual in both datasets. 
+
+
+**3c.** Apply the model identified in (3a) and forecast the mean and the variance of the last week of data. Plot the predicted data to compare the predicted values to the actual observed ones. Include 95% confidence intervals for the forecasts (mean only) in the corresponding plots. Interpret the results, particularly comparing forecast using daily versus weekly data.
+
+```{r}
+## 1. Prediction of the return time series
+## 2. Prediction of the volatility
+nfore = length(daily.testing)
+fore.series.1 = NULL
+fore.sigma.1 = NULL
+fore.series.2 = NULL
+fore.sigma.2 = NULL
+fore.series.3 = NULL
+fore.sigma.3 = NULL
+#for(f in 1: nfore){
+    ## Fit models
+#    data = daily.train
+#    if(f>2)
+#       data = c(daily.training,daily.testing[1:(f-1)])
+    
+#    model.two = ugarchfit(spec.two, data, solver = 'hybrid')
+#    model.four = ugarchfit(spec.four, data, solver = 'hybrid')
+#    model.five = ugarchfit(spec.five, data, solver = 'hybrid')
+    ## Forecast
+#    fore = ugarchforecast(model.two, n.ahead=1)
+#    fore.series.1 = c(fore.series.1, fore@forecast$seriesFor)
+#    fore.sigma.1 = c(fore.sigma.1, fore@forecast$sigmaFor)
+    
+#    fore = ugarchforecast(model.four, n.ahead=1)
+#    fore.series.2 = c(fore.series.2, fore@forecast$seriesFor)
+#    fore.sigma.2 = c(fore.sigma.2, fore@forecast$sigmaFor)
+    
+#    fore = ugarchforecast(model.five, n.ahead=1)
+#    fore.series.3 = c(fore.series.3, fore@forecast$seriesFor)
+#    fore.sigma.3 = c(fore.sigma.3, fore@forecast$sigmaFor)
+#}
+
+#ymin = 
+#min(c(as.vector(daily.testing),fore.series.1,fore.series.2,fore.series.3), na.rm 
+#= T) 
+#ymax = 
+#max(c(as.vector(daily.testing),fore.series.1,fore.series.2,fore.series.3), na.rm 
+#= T) 
+#data.plot = daily.testing 
+#names(data.plot)="Fore" 
+#n=length(daily.ts) 
+#time.series = daily.ts[c(n-90):n]
+
+```
+
+
+```{r}
+nfore = length(weekly.testing) 
+w_fore.series.1 = NULL 
+w_fore.sigma.1 = NULL 
+w_fore.series.2 = NULL 
+w_fore.sigma.2 = NULL 
+w_fore.series.3 = NULL 
+w_fore.sigma.3 = NULL 
+for(f in 1: nfore){ 
+    ## Fit models 
+    data = weekly.training 
+    if(f>2) 
+       data = c(weekly.training,weekly.testing[1:(f-1)]) 
+    model.one.week = ugarchfit(spec.one.week, data, solver = 'hybrid') 
+    model.two.week = ugarchfit(spec.two.week, data, solver = 'hybrid') 
+    
+    ## Forecast 
+    fore = ugarchforecast(model.one.week, n.ahead=1) 
+    w_fore.series.1 = c(w_fore.series.1, fore@forecast$seriesFor) 
+    w_fore.sigma.1 = c(w_fore.sigma.1, fore@forecast$sigmaFor) 
+    
+    fore = ugarchforecast(model.two.week, n.ahead=1) 
+    w_fore.series.2 = c(w_fore.series.2, fore@forecast$seriesFor) 
+    w_fore.sigma.2 = c(w_fore.sigma.2, fore@forecast$sigmaFor) 
+  
+} 
+## Compare squared observed time series with variance forecasts 
+ymin = 
+min(c(as.vector(weekly.testing),w_fore.series.1,w_fore.series.2)
+ , na.rm = T) 
+ymax = 
+max(c(as.vector(weekly.testing),w_fore.series.1,w_fore.series.2)
+ , na.rm = T) 
+data.plot = weekly.testing 
+names(data.plot)="Fore" 
+n=length(weekly.ts) 
+time.series = weekly.ts[c(n-90):n]
+
+#plot(time.series,type="l", ylim=c(ymin,ymax), xlab="Time", ylab="Return 
+#Price") 
+#data.plot$Fore=fore.series.1
+#points(data.plot,lwd= 2, col="blue")
+#data.plot$Fore=fore.series.2
+#points(data.plot,lwd= 2, col="brown")
+
+```
+
+*Response: Interpretation of the results*
+
+**3d.** Calculate Mean Absolute Percentage Error (MAPE) and Precision Measure (PM) for the mean forecasts (PM should not be calculated for weekly data).  Compare the accuracy of the predictions for the daily and weekly time series using these two measures. Compare the accuracy of the forecasts with those obtained in (2d). Interpret the results.
+
+```{r}
+#daily, i did not get prediction on daily
+### Mean Absolute Percentage Error (MAPE)
+mean(abs(fore.series.1 - daily.testing)/abs(daily.testing))
+### Precision Measure (PM)
+sum((fore.series.1 - daily.testing)^2)/sum((daily.testing-mean(daily.testing))^2)
+
+#weekly
+mean(abs(w_fore.series.1 - weekly.testing)/abs(weekly.testing))
+mean(abs(w_fore.series.2 - weekly.testing)/abs(weekly.testing))
+
+```
+*Response: Model comparison * . 
+From the result, MAPE in weekly date, both values are similarly small, but still a little bigger than the MAPE value based on 2d. In that case, the model built in 2d is better which explained more variability. 
+
+
+**3e**  Use the ARMA model in 3a to fit with Exponential GARCH (E-GARCH) model, and analyze the News Impact Curve. Fit E-GARCH(1,1) model to the datasets. Display the summary of the final model fit Use both the daily as well as the weekly data. Generate the News Impact Curve based on the fitted model and discuss its implications for asymmetry in volatility.
+
+*Response:*
+```{r}
+#weekly data
+week.egarch = ugarchspec(variance.model = list(model = "eGARCH", garchOrder = c(1, 1)), mean.model = list(armaOrder=c(5,5),include.mean = T), distribution.model = "std")
+week.egarch.fit = ugarchfit(week.egarch, weekly.training, solver = "hybrid")
+#to check all options
+#plot(week.egarch.fit)
+#news.weekly = newsimpact(week.egarch.fit)
+#plot(news.weekly$)
+
+```
+
+```{r}
+#daily data
+daily.egarch = ugarchspec(variance.model = list(model = "eGARCH", garchOrder = c(0, 0)), mean.model = list(armaOrder=c(2,1),include.mean = T), distribution.model = "std")
+daily.egarch.fit= ugarchfit(daily.egarch, daily.ts, solver = "hybrid")
+news.daily = newsimpact(daily.egarch.fit)
+
+```
+
+
+#Question 4: Reflection on the Modeling and Forecasting 
+
+Based on the analysis above, discuss the application of ARIMA on the stock price versus the application of ARMA-GARCH on the stock return. How do the models fit the data? How well do the models predict?  How do the models perform when using daily versus weekly data? Would you use one approach over another for different settings? What are some specific points of caution one would need to consider when applying those models?
+
+*Response: Final considerations*
+(1)If only do an analysis on weekly data, I would prefer ARIMA model to do prediction on long term value of the stock price because of the window period has a bias-variance trade off advantage,meaning that I would use ARIMA model do an analysis on more smoothed data. Whereas for daily data, I would prefer ARMA-GARCH joint model to catch more accurate variations.
+
+(2)In our case, since the time period covers period of Corona, we need to be aware of the outliers that introduced due to this special external events using ARMA-GARCH model, which may lead to an overestimation on the prediction of stock price. 
