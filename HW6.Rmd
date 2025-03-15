@@ -337,16 +337,16 @@ lines((index(AAPLDaily))[(n.train.daily + 1):n.daily], lowerbound.daily, lty = 2
 # daily 
 true.daily = as.vector (new.daily[(n.train.daily + 1) : n.daily])
 
-mape.daily = mean(abs(prediction.daily$pred-true)/ true)
+mape.daily = mean(abs(prediction.daily$pred-true.daily)/ true.daily)
 print("MAPE of daily stock close price")
 mape.daily
 
-pm.daily = (sum(prediction.daily$pred-true)^2)/(sum(true - mean(true))^2)
+pm.daily = (sum(prediction.daily$pred-true.daily)^2)/(sum(true.daily - mean(true.daily))^2)
 print("PM of daily stock close price")
 pm.daily
 
 print("How many observations are within PI in daily stock close price prediction")
-number.daily = (sum(true < upperbound.daily) & sum(true > lowerbound.daily))
+number.daily = (sum(true.daily < upperbound.daily) & sum(true.daily > lowerbound.daily))
 number.daily
 
 #weekly
@@ -361,7 +361,7 @@ print("PM of weekly stock close price")
 pm.weekly
 
 print("How many observations are within PI in weekly stock close price prediction")
-number.weekly = (sum(true < upperbound.daily) & sum(true > lowerbound.daily))
+number.weekly = (sum(true.weekly < upperbound.daily) & sum(true.weekly > lowerbound.daily))
 number.weekly
 
 ```
@@ -505,11 +505,11 @@ model.test.garch.week = function(m, n) {
 
 orders.arma = data.frame(Inf, Inf, Inf)
 names(orders.arma) = c("p","q","BIC")
-for (m in 0:2) for (n in 0:2) {
-  Error = tryCatch(orders.arm = rbind(orders.arma, test.model.arma.week(m, n)), error = function(e) e) 
-  if (inherits(Error, "error"))
-    next
-}
+#for (m in 0:2) for (n in 0:2) {
+#  Error = tryCatch(orders.arma = rbind(orders.arma, model.test.garch.week(m, n)), error = function(e) e) 
+#  if (inherits(Error, "error"))
+#    next
+#}
 
 ```
 
