@@ -576,18 +576,43 @@ infocriteria(model.five.week)
 
 *Response: Analysis of the ARMA GARCH Fit for the Weekly and daily Data* 
 (1) From the criteria, there are three models have similar result, since less complex model, the better it is, I would choose the model with arma order being 2 and 1, garch order being 0,0. 
-(2) About weekly stock close price, from the criteria, I prefer less complex model with garch order being 1 and 1, arma order being 5 and 5. 
+(2) About weekly stock close price, from the criteria, I prefer cleaner model with garch order being 1 and 1, arma order being 5 and 5. 
 
 
 **3b.** Evaluate the model residuals and squared residuals using the ACF and PACF plots as well as hypothesis testing for serial correlation. What would you conclude based on this analysis?
 
-
 ```{r}
+# residuals analysis from daily data
+resids.daily = residuals(model.five) 
+
+acf(resids.daily, main ="Daily ACF: Residuals") 
+pacf(resids.daily, main ="Daily PACF: Residuals") 
+acf(resids.daily^2, main ="Daily ACF: Squared Residuals") 
+pacf(resids.daily^2, main ="Daily PACF: Squared Residuals")
+
+# Hypo test
+Box.test(resids.daily, lag = 10, type = "Ljung-Box")
+Box.test(resids.daily^2, lag = 10, type = "Ljung-Box")
 
 ```
 
+```{r}
+#residual analysis on weekly stock close price
+resids.weekly = residuals(model.one.week) 
+
+acf(resids.weekly, main ="Weekly ACF: Residuals") 
+pacf(resids.weekly, main ="Weekly PACF: Residuals") 
+acf(resids.weekly^2, main ="Weekly ACF: Squared Residuals") 
+pacf(resids.weekly^2, main ="Weekly PACF: Squared Residuals")
+
+# Hypo test
+Box.test(resids.weekly, lag = 10, type = "Ljung-Box")
+Box.test(resids.weekly^2, lag = 10, type = "Ljung-Box")
+```
 
 *Response:ARIMA residual analysis for the Weekly and daily Data*
+From p values in both daily and weekly stock close price time series, about residual, p values are all bigger than 0.05, indication of uncorrelated relation. But p values on squared residual, both are much smaller than 0.05, indicating a correlation existence. those relations also have been exhibited in ACF and PACF plots of both residual and squared residual in both datasets. 
+
 
 **3c.** Apply the model identified in (3a) and forecast the mean and the variance of the last week of data. Plot the predicted data to compare the predicted values to the actual observed ones. Include 95% confidence intervals for the forecasts (mean only) in the corresponding plots. Interpret the results, particularly comparing forecast using daily versus weekly data.
 
