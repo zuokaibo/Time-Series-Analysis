@@ -303,7 +303,7 @@ prediction = predict(weekly.final.diff.two, n.ahead = n.pred)
 upperbound = prediction$pred + 1.96*prediction$se
 lowerbound = prediction$pred - 1.96*prediction$se
 
-plot(index(AAPLWeekly)[(n-n.pred-4):n], new.weekly[(n-n.pred - 4) :n], type = "l", ylim = c(min(lowerbound), max(upperbound)))
+plot(index(AAPLWeekly)[(n-n.pred-4):n], new.weekly[(n-n.pred - 4) :n], type = "l", ylim = c(min(lowerbound), max(upperbound)), xlab="prediction on test data(weekly)", ylab="weekly stock close price")
 points((index(AAPLWeekly))[(n.train + 1):n], prediction$pred, col="blue")
 lines((index(AAPLWeekly))[(n.train + 1):n], upperbound, lty = 2, lwd = 2, col = "red")
 lines((index(AAPLWeekly))[(n.train + 1):n], lowerbound, lty = 2, lwd = 2, col = "red")
@@ -320,7 +320,7 @@ prediction.daily = predict(daily.final.diff.one, n.ahead = n.pred.daily)
 upperbound.daily = prediction.daily$pred + 1.96*prediction.daily$se
 lowerbound.daily = prediction.daily$pred - 1.96*prediction.daily$se
 
-plot(index(AAPLDaily)[(n.daily-n.pred.daily-4):n.daily], new.daily[(n.daily-n.pred.daily - 4):n.daily], type = "l", ylim = c(min(lowerbound.daily), max(upperbound.daily)))
+plot(index(AAPLDaily)[(n.daily-n.pred.daily-4):n.daily], new.daily[(n.daily-n.pred.daily - 4):n.daily], type = "l", ylim = c(min(lowerbound.daily), max(upperbound.daily)),xlab="prediction on test data(daily)", ylab="daily stock close price")
 points((index(AAPLDaily))[(n.train.daily + 1):n.daily], prediction.daily$pred, col="blue")
 lines((index(AAPLDaily))[(n.train.daily + 1):n.daily], upperbound.daily, lty = 2, lwd = 2, col = "red")
 lines((index(AAPLDaily))[(n.train.daily + 1):n.daily], lowerbound.daily, lty = 2, lwd = 2, col = "red")
@@ -462,7 +462,7 @@ model.two = ugarchfit(spec.two, daily.training, solver = "hybrid")
 infocriteria(model.two)
 
 
-spec.three = ugarchspec(variance.model = list(garchOrder = c(2, 2)), mean.model = list(armaOrder=c(0,0),include.mean = T), distribution.model = "std")
+spec.three = ugarchspec(variance.model = list(garchOrder = c(1, 1)), mean.model = list(armaOrder=c(0,0),include.mean = T), distribution.model = "std")
 model.three = ugarchfit(spec.three, daily.training, solver = "hybrid")
 infocriteria(model.three)
 
@@ -471,20 +471,72 @@ spec.four = ugarchspec(variance.model = list(garchOrder = c(2, 2)), mean.model =
 model.four = ugarchfit(spec.four, daily.training, solver = "hybrid")
 infocriteria(model.four)
 
+spec.five = ugarchspec(variance.model = list(garchOrder = c(0, 0)), mean.model = list(armaOrder=c(2,1),include.mean = T), distribution.model = "std")
+model.five = ugarchfit(spec.five, daily.training, solver = "hybrid")
+infocriteria(model.five)
+
 
 ```
-*Response: Analysis of the ARMA GARCH Fit for the Weekly and daily Data* 
 
+```{r}
+# arma + garch model on weekly data
+dates.removed = 5
 
+weekly.ts = ts(head(new.weekly, -1), start =c(2013,1,1), freq = 52.18)
 
+weekly.training = weekly.ts[1: (length(weekly.ts) - dates.removed)]
+weekly.testing = weekly.ts[(length(weekly.ts) - dates.removed +1) : length(weekly.ts)]
 
-**3b.** Evaluate the model residuals and squared residuals using the ACF and PACF plots as well as hypothesis testing for serial correlation. What would you conclude based on this analysis?
+# reference, lecture notes
+# find values of m and n
+final.bic = Inf
+final.order = c(0,0)
+
+model.test.garch.week = function(m, n) {
+  spec = ugarchspec(variance.model = list(garchOrder = c(m, n)), mean.model = list(armaOrder=c(5,5),include.mean = T), distribution.model = "std")
+  fit = ugarchfit(spec, weekly.training, solver= "hybrid")
+  current.bic = infocriteria(fit)[2]
+  bicdata = data.frame(m,n,current.bic)
+  names(bicdata) = c("m","n","BIC")
+  print(paste(m,n,current.bic, sep=" "))
+  return(bicdata)
+}
+
+orders.arma = data.frame(Inf, Inf, Inf)
+names(orders.arma) = c("p","q","BIC")
+for (m in 0:2) for (n in 0:2) {
+  Error = tryCatch(orders.arm = rbind(orders.arma, test.model.arma.week(m, n)), error = function(e) e) 
+  if (inherits(Error, "error"))
+    next
+}
+
+```
+
+```{r}
+test.model.arma.week = function(p, q) {
+  spec = ugarchspec(variance.model = list(garchOrder = c(1,1)), mean.model = list(armaOrder = c(p,q), include.mean=T), distribution.model = "std")
+  fit = ugarchfit(spec, weekly.training, solver="hybrid")
+  current.bic = infocriteria(fit)[2]
+  bic.arma = c("p","q", "BIC")
+  print(paste(p, q, current.bic, sep=" "))
+  return(bic.arma)
+}
+
+orders.arma = data.frame(Inf, Inf, Inf)
+names(orders.arma) = c("p","q","BIC")
+for (p in 0:5) for (q in 0:5) {
+  Error = tryCatch(orders.arm = rbind(orders.arma, test.model.arma.week(p, q)), error = function(e) e) 
+  if (inherits(Error, "error"))
+    next
+}
+
+```
 
 
 ```{r}
-# find values of p and q , since smallest bic value is 5.6108 with m = 1, n = 1
-test.model.arma = function(p, q) {
-  spec = ugarchspec(variance.model = list(garchOrder = c(1,1)), mean.model = list(armaOrder = c(p,q), include.mean=T), distribution.model = "std")
+# refine garch
+test.model.arma.week = function(p, q) {
+  spec = ugarchspec(variance.model = list(garchOrder = c(m,n)), mean.model = list(armaOrder = c(4,3), include.mean=T), distribution.model = "std")
   fit = ugarchfit(spec, daily.training, solver="hybrid")
   current.bic = infocriteria(fit)[2]
   bic.arma = c("p","q", "BIC")
@@ -495,11 +547,42 @@ test.model.arma = function(p, q) {
 orders.arma = data.frame(Inf, Inf, Inf)
 names(orders.arma) = c("p","q","BIC")
 for (p in 0:5) for (q in 0:5) {
-  Error = tryCatch(orders.arm = rbind(orders.arma, test.model.arma(p, q)), error = function(e) e) 
+  Error = tryCatch(orders.arm = rbind(orders.arma, test.model.arma.week(p, q)), error = function(e) e) 
   if (inherits(Error, "error"))
     next
 }
 
+```
+
+```{r}
+# selecting models with different orders' combination
+spec.one.week = ugarchspec(variance.model = list(garchOrder = c(1, 1)), mean.model = list(armaOrder=c(5,5),include.mean = T), distribution.model = "std")
+model.one.week = ugarchfit(spec.one.week, weekly.training, solver = "hybrid")
+infocriteria(model.one.week)
+
+spec.two.week = ugarchspec(variance.model = list(garchOrder = c(1, 1)), mean.model = list(armaOrder=c(4,3),include.mean = T), distribution.model = "std")
+model.two.week = ugarchfit(spec.two.week, weekly.training, solver = "hybrid")
+infocriteria(model.two.week)
+
+
+spec.three.week = ugarchspec(variance.model = list(garchOrder = c(0, 0)), mean.model = list(armaOrder=c(4,3),include.mean = T), distribution.model = "std")
+model.three.week = ugarchfit(spec.three, weekly.training, solver = "hybrid")
+infocriteria(model.three.week)
+
+spec.five.week = ugarchspec(variance.model = list(garchOrder = c(1, 1)), mean.model = list(armaOrder=c(0,0),include.mean = T), distribution.model = "std")
+model.five.week = ugarchfit(spec.five.week, weekly.training, solver = "hybrid")
+infocriteria(model.five.week)
+```
+
+*Response: Analysis of the ARMA GARCH Fit for the Weekly and daily Data* 
+(1) From the criteria, there are three models have similar result, since less complex model, the better it is, I would choose the model with arma order being 2 and 1, garch order being 0,0. 
+(2) About weekly stock close price, from the criteria, I prefer less complex model with garch order being 1 and 1, arma order being 5 and 5. 
+
+
+**3b.** Evaluate the model residuals and squared residuals using the ACF and PACF plots as well as hypothesis testing for serial correlation. What would you conclude based on this analysis?
+
+
+```{r}
 
 ```
 
