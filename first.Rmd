@@ -35,16 +35,16 @@ data$DATE = as.Date(data$DATE, format =  "%m/%d/%Y")
 
 head(data)
 
-sales = xts(data$Total.Sales, start = c(2000,1,1), frequency = 12, order.by=as.Date(data$DATE))
-orders = xts(data$New.Orders, start = c(2000,1,1), frequency = 12, order.by = as.Date(data$DATE))
+sales = ts(data$Total.Sales, start = c(2000,1,1), frequency = 12 )
+orders = ts(data$New.Orders, start = c(2000,1,1), frequency = 12)
 
 ```
 
 ```{r}
-sales.plot = autoplot(sales, ts.colour = "blue", ts.linetype = "solid") + xlab("date") + ylab("sales") + ggtitle("Total Sales")
+sales.plot = autoplot(sales) + xlab("date") + ylab("sales") + ggtitle("Total Sales")
 sales.plot
 
-orders.plot = autoplot(orders, ts.colour = "red", ts.linetype = "solid") + xlab("data") + ylab("orders") + ggtitle("New Orders")
+orders.plot = autoplot(orders) + xlab("data") + ylab("orders") + ggtitle("New Orders")
 orders.plot
 
 newplots = cbind(sales, orders)
@@ -60,18 +60,23 @@ pacf(sales, lag.max = 200)
 acf(orders, lag.max = 200)
 pacf(orders, lag.max = 200)
 
+
+##### (not sure if code below is correct, to check a relation between two univariate time series variables)
+
 ## checking relation between new orders and total sales within 12 month.
 total.sales  = as.numeric(sales)
 new.orders = as.numeric(orders)
 astsa::lag2.plot(new.orders, total.sales, 12)
 
-## checking correlation coefficient btween two time series variables: new orders and total sales
+## checking correlation coefficient between two time series variables: new orders and total sales
 ccf(new.orders, total.sales)
 ```
 
 (1) both of acf, most lags extend beyond the confidence band, indicating a significant autocorrelation at those lags, those lags are gradually declining, suggesting a long term dependency. 
 
 (2) A seasonality also exists in both acf plots. 
+
+(3) from the ccf, all lags are outside of confidence band, suggesting the correlation coefficient is very significant, indicating every month, there is a strong relation between new orders and total sales of the month. 
 
 ```{r}
 ## X-axis points converted to 0-1 scale
@@ -89,15 +94,58 @@ sales.spline.fit = ts(fitted(sales.spline),start=2000,frequency=12)
 orders.spline = gam(orders.time.pts~s(orders.time.pts))
 orders.spline.fit = ts(fitted(orders.spline), start = 2000, frequency = 12)
 
-## checking trend on sales
-ts.plot(sales,ylab="Total sales", xlab = "Date")
-abline(sales.spline.fit[1],0, lwd=2,col="red")
+
+## plot trends, but doesnt show up in the plot, need to fix this . 
+
+## add trend to total sales 
+plot(sales,ylab="Total Sales")
+lines(sales.spline.fit,lwd=2,col="brown")
+abline(sales.spline.fit[1],0,lwd=2,col="blue")
+
+## add trend to new orders
+plot(orders,ylab="New Orders")
+lines(orders.spline.fit,lwd=2,col="brown")
+abline(orders.spline.fit[1],0,lwd=2,col="blue")
 
 ```
 
+(1) External factors caused a dramatic drop in sales and orders in year 2009 and 2021. 
 
+(2) it is a non linear trend in both plots, in general the trend in new orders plot is increasing, but in total sales plot, it is slightly decreasing. 
 
+```{r}
+## check seasonlity on sales
+sales.model1=lm(sales~harmonic(sales))
+summary(sales.model1)
 
+sales.model2=lm(sales~harmonic(sales,2))
+summary(sales.model2)
+
+## check seasonlity on sales
+orders.model1=lm(orders~harmonic(orders))
+summary(orders.model1)
+
+orders.model2=lm(orders~harmonic(orders,2))
+summary(orders.model2)
+
+```
+
+p values of seasonality estimation of total sales and new orders are bigger than 0.05, a non significant statistics, 
+
+```{r}
+## Fit a non-parametric model for trend and linear model for seasonality on total sales
+sales.har = harmonic(sales,2)
+sales.gam.fit = gam(sales~s(sales.time.pts)+sales.har)
+sales.dif.fit.gam = ts((sales-fitted(sales.gam.fit)),start=2000,frequency=12)
+ts.plot(sales.dif.fit.gam,ylab="residual", main="Residual Process on Total sales")
+
+## Fit a non-parametric model for trend and linear model for seasonality on new orders
+orders.har = harmonic(orders,2)
+orders.gam.fit = gam(orders~s(orders.time.pts)+orders.har)
+orders.dif.fit.gam = ts((orders-fitted(orders.gam.fit)),start=2000,frequency=12)
+ts.plot(orders.dif.fit.gam,ylab="residual", main="Residual Process on New orders")
+
+```
 
 
 
