@@ -1,0 +1,111 @@
+---
+title: "Untitled"
+author: "TSA Pro"
+date: "2025-03-18"
+output:
+  pdf_document: default
+  PDF: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r cars}
+library(mgcv)
+library(ggplot2)
+library(ggfortify)
+library(TSA)
+library(dynlm)
+library(stats)
+library(PerformanceAnalytics)
+library(fable)
+library(reshape2)
+library(astsa)
+library(forecast)
+
+```
+
+
+```{r pressure, echo=FALSE}
+data = read.csv("VehicleData-1.csv", header = T)
+data$DATE = as.Date(data$DATE, format =  "%m/%d/%Y")
+
+head(data)
+
+sales = xts(data$Total.Sales, start = c(2000,1,1), frequency = 12, order.by=as.Date(data$DATE))
+orders = xts(data$New.Orders, start = c(2000,1,1), frequency = 12, order.by = as.Date(data$DATE))
+
+```
+
+```{r}
+sales.plot = autoplot(sales, ts.colour = "blue", ts.linetype = "solid") + xlab("date") + ylab("sales") + ggtitle("Total Sales")
+sales.plot
+
+orders.plot = autoplot(orders, ts.colour = "red", ts.linetype = "solid") + xlab("data") + ylab("orders") + ggtitle("New Orders")
+orders.plot
+
+newplots = cbind(sales, orders)
+new.plots = autoplot(newplots, facets = F) + scale_y_continuous(trans = "log10")
+new.plots
+
+```
+
+```{r}
+acf(sales, lag.max = 200)
+pacf(sales, lag.max = 200)
+
+acf(orders, lag.max = 200)
+pacf(orders, lag.max = 200)
+
+## checking relation between new orders and total sales within 12 month.
+total.sales  = as.numeric(sales)
+new.orders = as.numeric(orders)
+astsa::lag2.plot(new.orders, total.sales, 12)
+
+## checking correlation coefficient btween two time series variables: new orders and total sales
+ccf(new.orders, total.sales)
+```
+
+(1) both of acf, most lags extend beyond the confidence band, indicating a significant autocorrelation at those lags, those lags are gradually declining, suggesting a long term dependency. 
+
+(2) A seasonality also exists in both acf plots. 
+
+```{r}
+## X-axis points converted to 0-1 scale
+sales.time.pts = c(1:length(sales))
+sales.time.pts = c(sales.time.pts - min(sales.time.pts))/max(sales.time.pts)
+
+orders.time.pts = c(1:length(orders))
+orders.time.pts = c(orders.time.pts - min(orders.time.pts))/max(orders.time.pts)
+
+## Splines Trend Estimation on sales
+sales.spline = gam(sales.time.pts~s(sales.time.pts))
+sales.spline.fit = ts(fitted(sales.spline),start=2000,frequency=12)
+
+## Splines Trend Estimation on orders
+orders.spline = gam(orders.time.pts~s(orders.time.pts))
+orders.spline.fit = ts(fitted(orders.spline), start = 2000, frequency = 12)
+
+## checking trend on sales
+ts.plot(sales,ylab="Total sales", xlab = "Date")
+abline(sales.spline.fit[1],0, lwd=2,col="red")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
