@@ -228,15 +228,24 @@ orders.final.diff.one
 ```
 
 ```{r}
+## arima evaluation on sales
+sales.resid = resid(sales.final.diff.one)
+plot(sales.resid, main = "Residual plot of total sales ( p =  3 & q = 0)")
+acf(sales.resid, lag.max = 200,  main = "Residual ACF of total sales ( p =  3 & q = 0)")
+pacf(sales.resid, lag.max = 200, main = "Residual PACF of total sales ( p =  3 & q = 0)")
+Box.test(sales.resid, lag = ( 0+3+1 ), type = "Ljung-Box", fitdf = (0+3))
 
 
-
-
-
+## arima evaluation on orders
+orders.resid = resid(sales.final.diff.one)
+plot(orders.resid, main = "Residual plot of New orders ( p =  5 & q = 6)")
+acf(orders.resid, lag.max = 200,  main = "Residual ACF of New orders ( p =  5 & q = 6)")
+pacf(orders.resid, lag.max = 200, main = "Residual PACF of New orders ( p =  5 & q = 6)")
+Box.test(orders.resid, lag = ( 5+6+1 ), type = "Ljung-Box", fitdf = (5+6))
 
 ```
 
-
+P value of total sales is bigger than 0.05, so no correlation. but p value of new orders is smaller than 0.05, suggesting a correlation. 
 
 
 
