@@ -25,6 +25,7 @@ library(fable)
 library(reshape2)
 library(astsa)
 library(forecast)
+library(tidyverse)
 
 ```
 
@@ -33,11 +34,14 @@ library(forecast)
 data = read.csv("VehicleData-1.csv", header = T)
 data$DATE = as.Date(data$DATE, format =  "%m/%d/%Y")
 
+data %>% mutate_all(~replace(., is.nan(.), 0))
+
 head(data)
 
 sales = ts(data$Total.Sales, start = c(2000,1,1), frequency = 12 )
 orders = ts(data$New.Orders, start = c(2000,1,1), frequency = 12)
 
+# length(sales)
 ```
 
 ```{r}
@@ -147,9 +151,90 @@ ts.plot(orders.dif.fit.gam,ylab="residual", main="Residual Process on New orders
 
 ```
 
+```{r}
+##  fitting arima model on sales 
+
+## differencing with order 1
+new.data.sales = sales
+
+# 60 is the 20% of length of sales
+sales.train = new.data.sales[1:(length(new.data.sales) - 60)]
+sales.test = new.data.sales[(length(new.data.sales)- 60 + 1) : length(new.data.sales)]
+# reference: lecture notes from module 2
+n = length(sales.train)
+norder = 7
+p = c(1:norder)-1
+q = c(1:norder)-1
+
+aic = matrix(0, norder, norder)
+
+# differencing with order 1
+for (i in 1:norder) {
+  for (j in 1:norder) {
+    modij = arima(sales.train, order=c(p[i], 1, q[j]), method = "ML", include.mean = FALSE)
+    aic[i, j] = modij$aic + 2 * (p[i] + q[j] +1)  * (p[i] + q[j]) / (n - p[i] - q[j] - 1)
+  } 
+}
+
+indexp = rep(c(1:norder),norder)
+indexq = rep(c(1:norder),each=norder)
+indexaic = which(aic == min(aic))
+porder = indexp[indexaic]-1
+qorder = indexq[indexaic]-1
+porder 
+qorder
+
+sales.final.diff.one = arima(sales.train, order = c(porder, 1, qorder), method = "ML")
+sales.final.diff.one
+
+```
+
+
+```{r}
+##  fitting arima model on orders 
+
+## differencing with order 1
+new.data.orders = orders
+
+# 60 is the 20% of length of sales
+orders.train = new.data.orders[1:(length(new.data.orders) - 60)]
+orders.test = new.data.orders[(length(new.data.orders)- 60 + 1) : length(new.data.orders)]
+# reference: lecture notes from module 2
+n = length(orders.train)
+norder = 7
+p = c(1:norder)-1
+q = c(1:norder)-1
+
+aic = matrix(0, norder, norder)
+
+# differencing with order 1
+for (i in 1:norder) {
+  for (j in 1:norder) {
+    modij = arima(orders.train, order=c(p[i], 1, q[j]), method = "ML", include.mean = FALSE)
+    aic[i, j] = modij$aic + 2 * (p[i] + q[j] +1)  * (p[i] + q[j]) / (n - p[i] - q[j] - 1)
+  } 
+}
+
+indexp = rep(c(1:norder),norder)
+indexq = rep(c(1:norder),each=norder)
+indexaic = which(aic == min(aic))
+porder = indexp[indexaic]-1
+qorder = indexq[indexaic]-1
+porder 
+qorder
+
+orders.final.diff.one = arima(orders.train, order = c(porder, 1, qorder), method = "ML")
+orders.final.diff.one
+```
+
+```{r}
 
 
 
+
+
+
+```
 
 
 
