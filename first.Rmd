@@ -247,6 +247,13 @@ Box.test(orders.resid, lag = ( 5+6+1 ), type = "Ljung-Box", fitdf = (5+6))
 
 P value of total sales is bigger than 0.05, so no correlation. but p value of new orders is smaller than 0.05, suggesting a correlation. 
 
+```{r}
+
+
+
+
+
+```
 
 
 
