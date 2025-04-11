@@ -375,6 +375,12 @@ direction = "backward",steps = 3)
 model_4 <- step(lm(y~.,data = model.comp.bic$varresult$atl.train.ts$model),
 direction = "backward",steps = 3)
 ```
+
+```{r}
+model.bic.restrict = restrict(model.comp.bic)
+```
+
+
 *Response*
 
 
@@ -391,9 +397,34 @@ direction = "backward",steps = 3)
 
 Evaluate the goodness of fit for the restricted BIC model using the multivariate ARCH test, the Jarque-Bera test and the Portmanteau test. State which assumptions are satisfied, and which are violated. (Note: While we evaluate the residuals for the normality assumption, we do not necessarily assume normality of the data. We use the normality assumption if we use the t-test to evaluate statistical significance.)
 
+```{r}
+arch.test(model.bic.restrict)
+```
+
+```{r}
+normality.test(model.bic.restrict)
+```
+
+```{r}
+serial.test(model.bic.restrict)
+```
+*Response*
 
 
 
+
+
+
+
+
+
+## Question 2d
+
+Using the VAR model with the order selected using BIC, forecast the last 9 months of 2023 of the DC data using the unrestricted and restricted VAR. Compare the predictions to the observed data. (You don't need to plot them (but can if you'd like). Using mean absolute percentage error and the precision measure, compare the predictions for DC results reran for 6 months from the univariate analysis model in 1c and this multivariate analysis. Discuss the differences or similarities.
+
+```{r}
+
+```
 
 
 
