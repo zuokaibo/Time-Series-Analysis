@@ -485,9 +485,6 @@ pred.res$fcst$dc.train.ts
 
 
 
-
-
-
 ## Question 2e
 
 Perform a Granger Causality analysis using Wald test to evaluate whether any of state-level rate leads DC's average electricity price. Would any of the indicators help in predicting or explaining DC's electricity prices in the future? Provide your interpretation based on the Granger causality as well as for forecasting comparison in (2d). For this, use the unrestricted bic model from Question 2a.
@@ -495,8 +492,77 @@ Perform a Granger Causality analysis using Wald test to evaluate whether any of 
 For the Terms term in wald.test, you want to select all lags of the same state for evaluation (ex. For CHI-HOU test: the sequence should select coefficients chi.hou1, chi.houl2, chi.houl3, ..., chi.hou6).
 
 ```{r}
-
+## Granger Causality: Wald Test
+coef.dc = coefficients(model.comp.bic)$dc.train.ts[-(5 * 2 + 1), 1]
+var.model = vcov(model.comp.bic)[2:11, 2:11]
+#      wald.test(b = coef.dc, var.model, Terms = seq(2, 5 * 2, 5))
 ```
+```{r}
+#   wald.test(b = coef.dc, var.model, Terms = seq(3, 5 * 2, 5))
+```
+```{r}
+#       wald.test(b = coef.dc, var.model, Terms = seq(4, 5 * 2, 5))
+```
+
+
+```{r}
+#             wald.test(b = coef.dc, var.model, Terms = seq(5, 5 * 2, 5))
+```
+
+*Response*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Question 3
+
+For this question, consider the training data to include the time values up to July 2016 and the testing data to include August 2016 to April 2017.
+
+## Question 3a
+
+Apply the VAR modeling approach with the order selected using the BIC approach giving the unrestricted VAR model. Apply a model selection analysis using stepwise regression to select the models for each individual time series. Based on the selected models, form the restricted VAR model, much like what was presented in the Moose R example code. Compare these two models in terms of coefficients and their statistical significance with the models derived in Question 2.
+
+Follow the below steps to implement this: 1)Analyze the coefficients of the unrestricted model. 2)Then treat each of the series separately and do a stepwise regression by apply lm() and step()(in the backward direction with 2 steps) functions to each of the component time series to examine the coefficients 3)The stepwise regressions will return three separate models. Analyze if the same coefficients are significant in the overall VAR versus each of the stepwise models. Discuss. 4)Then build a model using restrict and see which predictors were significant in the restricted VAR model.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
