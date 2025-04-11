@@ -423,9 +423,60 @@ serial.test(model.bic.restrict)
 Using the VAR model with the order selected using BIC, forecast the last 9 months of 2023 of the DC data using the unrestricted and restricted VAR. Compare the predictions to the observed data. (You don't need to plot them (but can if you'd like). Using mean absolute percentage error and the precision measure, compare the predictions for DC results reran for 6 months from the univariate analysis model in 1c and this multivariate analysis. Discuss the differences or similarities.
 
 ```{r}
+pred.unres = as.vector(predict(model.comp.bic, n.ahead = 9))
+pred.res = as.vector(predict(model.comp.bic.restrict, n.ahead = 9))
+#MAPE for unrestricted VAR
+preds.unres = pred.unres$fcst$dc.train.ts[, 1]
+obs = as.numeric(dc.test.ts)
+100 * mean(abs(preds.unres - obs) / obs)
 
 ```
 
+```{r}
+#MAPE for restricted VAR
+preds.res = pred.res$fcst$dc.train.ts[, 1]
+obs = as.numeric(dc.test.ts)
+100 * mean(abs(preds.res - obs) / obs)
+```
+
+```{r}
+preds.arima = arima_pred1$pred
+obs = as.numeric(dc.test.ts)
+#    100 * mean(abs(preds.arima - obs) / obs)
+```
+
+
+```{r}
+### Precision Measure (PM) for unrestricted VAR
+sum((preds.unres - obs) ^ 2) / sum((obs - mean(obs)) ^ 2)
+```
+
+```{r}
+### Precision Measure (PM) for restricted VAR
+sum((preds.res - obs) ^ 2) / sum((obs - mean(obs)) ^ 2)
+```
+
+```{r}
+### Precision Measure (PM) for restricted VAR
+sum((preds.res - obs) ^ 2) / sum((obs - mean(obs)) ^ 2)
+```
+
+```{r}
+### Precision Measure (PM) for ARIMA
+#          sum((preds.arima - obs) ^ 2) / sum((obs - mean(obs)) ^ 2)
+```
+
+
+```{r}
+# 95% Prediction Intervals and forcests
+pred.unres$fcst$dc.train.ts
+```
+
+```{r}
+pred.res$fcst$dc.train.ts
+```
+
+*Response*
 
 
 
@@ -436,6 +487,16 @@ Using the VAR model with the order selected using BIC, forecast the last 9 month
 
 
 
+
+## Question 2e
+
+Perform a Granger Causality analysis using Wald test to evaluate whether any of state-level rate leads DC's average electricity price. Would any of the indicators help in predicting or explaining DC's electricity prices in the future? Provide your interpretation based on the Granger causality as well as for forecasting comparison in (2d). For this, use the unrestricted bic model from Question 2a.
+
+For the Terms term in wald.test, you want to select all lags of the same state for evaluation (ex. For CHI-HOU test: the sequence should select coefficients chi.hou1, chi.houl2, chi.houl3, ..., chi.hou6).
+
+```{r}
+
+```
 
 
 
