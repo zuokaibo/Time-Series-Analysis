@@ -1,0 +1,128 @@
+---
+title: "hw8"
+output: html_document
+date: "2025-04-11"
+---
+
+```{r setup, include=FALSE}
+# Set up the default parameters
+# 1. The code block will be shown in the document
+# 2. set up figure display size
+# 3. turn off all the warnings and messages
+
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.width = 8, fig.height = 4)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+```
+# Background
+
+We have explored how various U.S. economic indicators are related to each other, which is a classic application for the VAR modeling. The U.S. Federal Reserve use these economic indicators to make monetary policy decision. Specifically, we will focus on one the top commodities, electricity prices (cents per kilowatt-hour (cents/kWh), for the top most metropolitan areas in the U.S. In this homework, we will analysis the average electricity prices for the following areas:
+
+-   Washington DC
+-   Atlanta, GA
+-   Los Angeles, CA
+-   Seattle, WA
+
+The data covered for the analysis is the period starting from Jan 1998 - Dec 2023, in a monthly frequency.
+
+# Instructions on reading the data
+
+To read the data in R, save the file in your working directory (make sure you have changed the directory if different from the R working directory) and read the data using the R function read.csv()
+
+```{r cars}
+# Read in the monthly data
+
+data <- read.csv('Metro_electricity_prices.csv', header = TRUE)
+idx <- as.Date(as.character(data$DATE), '%m/%d/%y')
+
+```
+
+
+```{r pressure, echo=FALSE}
+library(lubridate)
+library(dplyr)
+library(data.table)
+library(vars)
+library(xts)
+library(mgcv)
+library(stats)
+library(tseries)
+library(aod)
+library(forecast)
+library(ggplot2)
+```
+# Question 1: Univariate Analysis
+
+## Question 1a
+
+Plot the time series of all indicators for comparison and discuss whether you find any similarities in terms of trend or other features.
+Plot also the 1st order difference overlay plot and the corresponding ACF plots for the 4 states. Comment on the original and differenced time series data in terms of stationarity and volatility.
+
+```{r}
+# transform variables into time series
+dc = xts(data$DC, idx)
+la = xts(data$LA, idx)
+sea = xts(data$SEA, idx)
+atl = xts(data$ATL, idx)
+
+# merge all univariate time series into multivariate time series 
+all.merge = merge(dc, la, join="inner")
+all.merge = merge(all.merge, sea, join = "inner")
+all.merge = merge(all.merge, atl, join = "inner")
+colnames(all.merge) = c("tsdc", "tsla", "tssea", "tsatl")
+
+#plot time series and its first order differencing
+plot(all.merge, main="price of four states")
+
+all.merge.diff = diff(all.merge)
+plot(all.merge.diff, main = "price of four states with first order differencing")
+
+#plot ACF 
+dc.price.ts = ts(as.numeric(all.merge$tsdc), start=c(1998,1), frequency = 4)
+dc.price.diff = diff(dc.price.ts)
+acf(dc.price.diff, main="DC price")
+
+la.price.ts = ts(as.numeric(all.merge$tsla), start=c(1998,1), frequency = 4)
+la.price.diff = diff(la.price.ts)
+acf(la.price.diff, main="LA price")
+
+sea.price.ts = ts(as.numeric(all.merge$tssea), start=c(1998,1), frequency = 4)
+sea.price.diff = diff(sea.price.ts)
+acf(sea.price.diff, main="Seattle price")
+
+atl.price.ts = ts(as.numeric(all.merge$tsatl), start=c(1998,1), frequency = 4)
+atl.price.diff = diff(atl.price.ts)
+acf(atl.price.diff, main="Atlanta price")
+
+```
+
+
+*Response*
+From original data, all indicators have an increasing trend until Jan2009, then a sudden drop, but a general increasing trend again till 2014, a sudden drop happened again then increased back. we can learn that the variability have increased or decreased dramaticlly over the time, even worse since 2019 due to covid. From the 1st order differencing data, we have removed the trend, but a strong volatilties still exist. The ACF plots of all time series have show a seasonality. 
+
+## Question 1b
+
+Using the original, undifferenced data, divide the data into training & test datasets with the last 9 months of 2023 being the testing data: April 2023 - Dec 2023. Fit a non-parametric trend and seasonality (use monthly factor) using the splines regression on the DC rate training dataset. Comment on the effectiveness of the splines fit. Then, apply ARMA to the residuals obtained from this splines fitting. Use max order of 6. Evaluate goodness of fit for the ARMA model (plot residuals, ACF, PACF, and Q-Q plot & residual tests).
+
+Lastly, fit the ARMA model on training data (Not residuals) with the optimal orders selected above. Forecast the last 9 months of 2023 (testing data) and compare to the observed values. Discuss why there are (or not!) significant differences between predicted vs observed. To do this, you should also evaluate the prediction intervals with a 95% confidence level.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
