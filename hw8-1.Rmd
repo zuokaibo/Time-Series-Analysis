@@ -294,7 +294,7 @@ comp.aic$selection
 ```
 ```{r}
 model.comp.aic <- VAR(train.ts, p = 3)
-model..comp.bic <- VAR(train.ts, p = 2)
+model.comp.bic <- VAR(train.ts, p = 2)
 ```
 
 ```{r}
@@ -354,8 +354,58 @@ Based on the analysis in 2a, select the VAR order using BIC and fit that model. 
 
 Follow the below steps to implement this: 1)Analyze the coefficients of the unrestricted model. 2)Then treat each of the series separately and do a stepwise regression by apply lm() and step() (in the backward direction with 5 steps) functions to each of the component time series to examine the coefficients 3)The stepwise regressions will return four separate models. Analyze if the same coefficients are significant in the overall VAR versus each of the stepwise models. Discuss. 4)Then build a model using restrict and see which predictors were significant in the restricted VAR model.
 ```{r}
-
+summary(model.comp.bic)
 ```
+
+```{r}
+model_1 = step(lm(y~.,data = model.comp.bic$varresult$la.train.ts$model),
+direction = "backward",steps = 3)
+```
+
+
+```{r}
+model_2 = step(lm(y~.,data = model.comp.bic$varresult$sea.train.ts$model),
+direction = "backward",steps = 3)
+```
+```{r}
+model_3 = step(lm(y~.,data = model.comp.bic$varresult$sea.train.ts$model),
+direction = "backward",steps = 3)
+```
+```{r}
+model_4 <- step(lm(y~.,data = model.comp.bic$varresult$atl.train.ts$model),
+direction = "backward",steps = 3)
+```
+*Response*
+
+
+
+
+
+
+
+
+
+
+
+## Question 2c
+
+Evaluate the goodness of fit for the restricted BIC model using the multivariate ARCH test, the Jarque-Bera test and the Portmanteau test. State which assumptions are satisfied, and which are violated. (Note: While we evaluate the residuals for the normality assumption, we do not necessarily assume normality of the data. We use the normality assumption if we use the t-test to evaluate statistical significance.)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
