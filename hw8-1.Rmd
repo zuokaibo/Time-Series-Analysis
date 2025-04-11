@@ -79,27 +79,28 @@ all.merge.diff = diff(all.merge)
 plot(all.merge.diff, main = "price of four states with first order differencing")
 
 #plot ACF 
-dc.price.ts = ts(as.numeric(all.merge$tsdc), start=c(1998,1), frequency = 4)
+dc.price.ts = ts(as.numeric(all.merge$tsdc), start=c(1998,1), frequency = 12)
 dc.price.diff = diff(dc.price.ts)
 acf(dc.price.diff, main="DC price")
 
-la.price.ts = ts(as.numeric(all.merge$tsla), start=c(1998,1), frequency = 4)
+la.price.ts = ts(as.numeric(all.merge$tsla), start=c(1998,1), frequency = 12)
 la.price.diff = diff(la.price.ts)
 acf(la.price.diff, main="LA price")
 
-sea.price.ts = ts(as.numeric(all.merge$tssea), start=c(1998,1), frequency = 4)
+sea.price.ts = ts(as.numeric(all.merge$tssea), start=c(1998,1), frequency = 12)
 sea.price.diff = diff(sea.price.ts)
 acf(sea.price.diff, main="Seattle price")
 
-atl.price.ts = ts(as.numeric(all.merge$tsatl), start=c(1998,1), frequency = 4)
+atl.price.ts = ts(as.numeric(all.merge$tsatl), start=c(1998,1), frequency = 12)
 atl.price.diff = diff(atl.price.ts)
 acf(atl.price.diff, main="Atlanta price")
 
 ```
 
-
 *Response*
 From original data, all indicators have an increasing trend until Jan2009, then a sudden drop, but a general increasing trend again till 2014, a sudden drop happened again then increased back. we can learn that the variability have increased or decreased dramaticlly over the time, even worse since 2019 due to covid. From the 1st order differencing data, we have removed the trend, but a strong volatilties still exist. The ACF plots of all time series have show a seasonality. 
+
+
 
 ## Question 1b
 
@@ -107,6 +108,70 @@ Using the original, undifferenced data, divide the data into training & test dat
 
 Lastly, fit the ARMA model on training data (Not residuals) with the optimal orders selected above. Forecast the last 9 months of 2023 (testing data) and compare to the observed values. Discuss why there are (or not!) significant differences between predicted vs observed. To do this, you should also evaluate the prediction intervals with a 95% confidence level.
 
+```{r}
+dc.train = dc.price.ts[0:(length(dc.price.ts) - 9)]
+dc.test = dc.price.ts[(length(dc.price.ts) - 8) : length(dc.price.ts)]
+
+dc.train.ts = ts(dc.train, start = 1998, frequency = 12)
+dc.test.ts = ts(dc.test, start = 2023, frequency = 12)
+
+time.pts = c(1:length(dc.train))
+time.pts = c(time.pts - min(time.pts)) / max(time.pts)
+gam.fit = gam(dc.train.ts ~ s(time.pts))
+temp.fit.gam = ts(fitted(gam.fit), start = 1998, frequency = 12)
+ts.plot(dc.train.ts, col="blue", main="DC spline", ylab = "DC price")
+lines(temp.fit.gam, col = "red")
+
+resid = resid(gam.fit)
+
+#select order by aic
+n = length(resid)
+norder = 6 
+p = c(1:norder) - 1
+q = c(1:norder) - 1
+aic <- matrix(0, norder, norder)
+for (i in 1:norder) {
+for (j in 1:norder) {
+modij <- arima(resid, order = c(p[i], 0, q[j]), method = 'ML')
+aic[i, j] <- modij$aic - 2 * (p[i] + q[j] + 1) + 2 * (p[i] + q[j] + 1) *
+n / (n - p[i] - q[j] - 2)
+}
+}
+aicv <- as.vector(aic)
+plot(aicv, ylab = "AIC values")
+
+indexp <- rep(c(1:norder), norder)
+indexq <- rep(c(1:norder), each = norder)
+indexaic <- which(aicv == min(aicv))
+porder <- indexp[indexaic] - 1
+qorder <- indexq[indexaic] - 1
+final_model <- arima(resid, order = c(porder, 0, qorder), method = 'ML')
+par(mfrow = c(2, 2))
+plot(resid(final_model), ylab = 'Std Residuals')
+abline(h = 0)
+acf(as.vector(resid(final_model)), main = 'Residuals ACF')
+pacf(as.vector(resid(final_model)), main = 'Residuals PACF')
+qqnorm(resid(final_model))
+qqline(resid(final_model))
+
+#Test for Uncorrelated Residuals for the final model
+Box.test(final_model$resid, lag = (porder + qorder + 1), type = "Box-Pierce", fitdf = (porder + qorder))
+Box.test(final_model$resid, lag = (porder + qorder + 1), type = "Ljung-Box", fitdf = (porder + qorder))
+jarque.bera.test(resid(final_model))
+shapiro.test(resid(final_model))
+
+final_model_pred <- arima(dc.train.ts, order = c(porder, 0, qorder),
+method = 'ML')
+arima_pred <- as.vector(predict(final_model_pred, n.ahead = 9))
+
+dc.test.ts
+arima_pred
+
+#95% Prediction Intervals
+arima_pred$pred[1] + c(-1, 1) * qnorm((1 - 0.05 / 2)) * arima_pred$se[1]
+
+arima_pred$pred[2] + c(-1, 1) * qnorm((1 - 0.05 / 2)) * arima_pred$se[2]
+```
 
 
 
