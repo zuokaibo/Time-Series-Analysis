@@ -186,21 +186,21 @@ arima_pred$pred[2] + c(-1, 1) * qnorm((1 - 0.05 / 2)) * arima_pred$se[2]
 Perform a similar analysis as in (1b) but this time applying ARIMA to the DC time series training dataset. Assume p,q belong to [0,5] and d belongs to [0,1]. Compare the forecast and discuss why these are different or similar from the testing data. Also evaluate the prediction intervals with a 95% confidence level, and compare the results of the forecast with the analysis in Question 1b by overlaying the ARMA and ARIMA predictions on the observed data.
 
 ```{r}
-test_model <- function(p, d, q) {
+test_model = function(p, d, q) {
 mod = arima(dc.train.ts, order = c(p, d, q), method = "ML")
 current.aic = AIC(mod)
 df = data.frame(p, d, q, current.aic)
-names(df) <- c("p", "d", "q", "AIC")
+names(df) = c("p", "d", "q", "AIC")
 # print(paste(p, d, q, current.aic, sep = " "))
 return(df)
 }
-orders <- data.frame(Inf, Inf, Inf, Inf)
-names(orders) <- c("p", "d", "q", "AIC")
+orders = data.frame(Inf, Inf, Inf, Inf)
+names(orders) = c("p", "d", "q", "AIC")
 for (p in 0:5) {
 for (d in 0:1) {
 for (q in 0:5) {
-possibleError <- tryCatch(
-orders <- rbind(orders, test_model(p, d, q)),
+possibleError = tryCatch(
+orders = rbind(orders, test_model(p, d, q)),
 error = function(e) {}
 )
 if (inherits(possibleError, "error"))
@@ -208,22 +208,17 @@ next
 }
 }
 }
-orders <- orders[order(-orders$AIC), ]
+orders = orders[order(-orders$AIC), ]
 tail(orders)
 
 ```
 
 
 ```{r}
-arima.dc <- arima(dc.train.ts, order = c(4, 1, 2), method = 'ML')
-arima_pred1 <- as.vector(predict(arima.dc, n.ahead = 2))
+arima.dc = arima(dc.train.ts, order = c(4, 1, 2), method = 'ML')
+arima_pred1 = as.vector(predict(arima.dc, n.ahead = 2))
 #### Test for Uncorrelated Residuals for the final model
-Box.test(
-arima.gdp$resid,
-lag = (4 + 2 + 1),
-type = "Box-Pierce",
-fitdf = (4 + 2)
-)
+Box.test(arima.gdp$resid,lag = (4 + 2 + 1), type = "Box-Pierce", fitdf = (4 + 2))
 ```
 ```{r}
 jarque.bera.test(resid(arima.dc))
@@ -266,12 +261,101 @@ Apply the VAR model to the multivariate time series including all 4 states' aver
 
 This can be done by following the below substeps:- 1)Combine the variables into a multivariate dataset 2) select/display var orders and isolate models using AIC and BIC orders 3)Isolate coefficients and covariances from the AIC model 4) applying the Wald test to the values obtained from the AIC model, but would not be present in the BIC model. You can run a single Wald test for each variable, with all the lagged coefficients for that particular variable, in all resulting in 4 wald tests.
 
+```{r}
+la.train = la.price.ts[0:(length(la.price.ts) - 9)]
+sea.train = sea.price.ts[0:(length(sea.price.ts) - 9)]
+atl.train = atl.price.ts[0:(length(atl.price.ts) - 9)]
+
+la.test = la.price.ts[(length(la.price.ts) - 8):length(la.price.ts)]
+sea.test = sea.price.ts[(length(sea.price.ts) - 8):length(sea.price.ts)]
+atl.test = atl.price.ts[(length(atl.price.ts) - 8):length(atl.price.ts)]
+
+```
+
+```{r}
+la.train.ts = ts(la.train, start = 1998, frequency = 12)
+sea.train.ts = ts(sea.train, start = 1998, frequency = 12)
+atl.train.ts = ts(atl.train, start = 1998, frequency = 12)
+
+la.test.ts = ts(la.test, start = 2023, frequency = 12)
+sea.test.ts = ts(sea.test, start = 2023, frequency = 12)
+atl.test.ts = ts(atl.test, start = 2023, frequency = 12)
+
+```
+
+```{r}
+train.ts = cbind(dc.train.ts, la.train.ts, sea.train.ts, atl.train.ts)
+
+test.ts = cbind(dc.test.ts, la.test.ts, sea.test.ts, atl.test.ts)
+
+comp.aic <- VARselect(train.ts)
+
+comp.aic$selection
+```
+```{r}
+model.comp.aic <- VAR(train.ts, p = 3)
+model..comp.bic <- VAR(train.ts, p = 2)
+```
+
+```{r}
+pord.1 = model.comp.aic$p
+
+coef.dc.2to3 = coefficients(model.comp.aic)$dc.train.ts[6:(3 * pord.1), 1]
+coef.la.2to3 = coefficients(model.comp.aic)$la.train.ts[6:(3 * pord.1), 1]
+coef.sea.2to3 = coefficients(model.comp.aic)$sea.train.ts[6:(3 * pord.1), 1]
+coef.atl.2to3 = coefficients(model.comp.aic)$atl.train.ts[6:(3 * pord.1), 1]
+
+## Covariance matrix of the coefficients
+index.dc = 7:(5 * pord.1 + 1)
+var.dc.2to3 = vcov(model.comp.aic)[index.dc, index.dc]
+
+index.la = c(((5 * pord.1) + 13):(10 * pord.1 + 2))
+var.la.2to3 = vcov(model.comp.aic)[index.la, index.la]
+
+index.sea = c(((10 * pord.1) + 14):(15 * pord.1 + 3))
+var.sea.2to3 = vcov(model.comp.aic)[index.sea, index.sea]
+
+index.atl = c(((15 * pord.1) + 15):(15 * pord.1 + 4))
+#var.atl.2to3 = vcov(model.comp.aic)[index.atl, index.atl]
+
+```
+
+```{r}
+#wald.test(b = coef.dc.2to3, var.dc.2to3, Terms = seq(1, 5 * (pord.1 - 3)))
+```
+```{r}
+#wald.test(b = coef.la.2to3, var.la.2to3, Terms = seq(1, 5 * (pord.1 - 5)))
+```
+```{r}
+#wald.test(b = coef.sea.2to3, var.sea.2to3, Terms = seq(1, 5 * (pord.1 - 5)))
+```
+```{r}
+#wald.test(b = coef.atl.3to7, var.atl.3to7, Terms = seq(1, 5 * (pord.1 - 5)))
+```
+
+*Response*
 
 
 
 
 
 
+
+
+
+
+
+
+
+
+## Question 2b
+
+Based on the analysis in 2a, select the VAR order using BIC and fit that model. Print out the model summary and comment on the statistical significance of the coefficients. Apply a model selection analysis using stepwise regression to select the models for each individual time series. What do you conclude from this model selection? Apply the restrict() command in R to restrict the model of order. How do the restricted models compare?
+
+Follow the below steps to implement this: 1)Analyze the coefficients of the unrestricted model. 2)Then treat each of the series separately and do a stepwise regression by apply lm() and step() (in the backward direction with 5 steps) functions to each of the component time series to examine the coefficients 3)The stepwise regressions will return four separate models. Analyze if the same coefficients are significant in the overall VAR versus each of the stepwise models. Discuss. 4)Then build a model using restrict and see which predictors were significant in the restricted VAR model.
+```{r}
+
+```
 
 
 
