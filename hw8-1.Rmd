@@ -516,22 +516,6 @@ var.model = vcov(model.comp.bic)[2:11, 2:11]
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # Question 3
 
 For this question, consider the training data to include the time values up to July 2016 and the testing data to include August 2016 to April 2017.
@@ -543,6 +527,70 @@ Apply the VAR modeling approach with the order selected using the BIC approach g
 Follow the below steps to implement this: 1)Analyze the coefficients of the unrestricted model. 2)Then treat each of the series separately and do a stepwise regression by apply lm() and step()(in the backward direction with 2 steps) functions to each of the component time series to examine the coefficients 3)The stepwise regressions will return three separate models. Analyze if the same coefficients are significant in the overall VAR versus each of the stepwise models. Discuss. 4)Then build a model using restrict and see which predictors were significant in the restricted VAR model.
 
 
+```{r}
+dc.test = dc.train[(length(dc.train) - 10):(length(dc.train) - 9)]
+la.test = la.train[(length(la.train) - 10):(length(la.train) - 9)]
+sea.test = sea.train[(length(sea.train) - 10):(length(sea.train) - 9)]
+atl.test = atl.train[(length(atl.train) - 10):(length(atl.train) - 9)]
+
+
+dc.train = dc.train[0:(length(dc.train) - 8)]
+la.train = la.train[0:(length(la.train) - 8)]
+sea.train = sea.train[0:(length(sea.train) - 8)]
+atl.train = atl.train[0:(length(atl.train) - 8)]
+
+```
+
+```{r}
+dc.train.ts = ts(dc.train, start = 1998, frequency = 12)
+la.train.ts = ts(la.train, start = 1998, frequency = 12)
+sea.train.ts = ts(sea.train, start = 1998, frequency = 12)
+atl.train.ts = ts(atl.train, start = 1998, frequency = 12)
+
+dc.test.ts = ts(dc.test, start = 2016, frequency = 12)
+la.test.ts = ts(la.test, start = 2016, frequency = 12)
+sea.test.ts = ts(sea.test, start = 2016, frequency = 12)
+atl.test.ts = ts(atl.test, start = 2016, frequency = 12)
+
+```
+
+```{r}
+train.ts = cbind(dc.train.ts, la.train.ts, sea.train.ts, atl.train.ts)
+
+test.ts = cbind(dc.train.ts, la.train.ts, sea.train.ts, atl.train.ts)
+
+vs.1 = VARselect(train.ts)
+
+vs.1$selection
+```
+
+```{r}
+model.a = VAR(train.ts, p = 2)
+model_1 = step(lm(y~.,data = model.a$varresult$dc.train.ts$model),
+direction = "backward",steps = 3)
+
+```
+```{r}
+model_2 <- step(lm(y~.,data = model.a$varresult$la.train.ts$model),
+direction = "backward",steps = 3)
+```
+
+```{r}
+model_3 <- step(lm(y~.,data = model.a$varresult$sea.train.ts$model),
+direction = "backward",steps = 3)
+```
+
+```{r}
+model_4 <- step(lm(y~.,data = model.a$varresult$atl.train.ts$model),
+direction = "backward",steps = 3)
+```
+
+```{r}
+model.a.res <- restrict(model.a)
+summary(model.a.res)
+```
+
+*Response*
 
 
 
@@ -550,6 +598,13 @@ Follow the below steps to implement this: 1)Analyze the coefficients of the unre
 
 
 
+## Question 3b
+
+Forecast the 9 months of available data using the unrestricted and restricted VAR models derived in (3a). Compare the predictions to the observed data using mean absolute percentage error and the precision measure for DC. Compare the predictions to those derived in (2d). Comment on the accuracy of the predictions by overlaying both sets of predictions on top of the observed data.
+
+```{r}
+
+```
 
 
 
