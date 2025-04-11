@@ -603,10 +603,31 @@ summary(model.a.res)
 Forecast the 9 months of available data using the unrestricted and restricted VAR models derived in (3a). Compare the predictions to the observed data using mean absolute percentage error and the precision measure for DC. Compare the predictions to those derived in (2d). Comment on the accuracy of the predictions by overlaying both sets of predictions on top of the observed data.
 
 ```{r}
+pred_unres.a = as.vector(predict(model.a, n.ahead = 9))
+pred_res.a = as.vector(predict(model.a.res, n.ahead = 9))
 
+#MAPE for unrestricted VAR
+preds.res = pred_res.a$fcst$dc.train.ts[, 1]
+obs = as.numeric(dc.test.ts)
+100 * mean(abs(preds.res - obs) / obs)
+```
+
+```{r}
+#MAPE for restricted VAR
+preds.unres = pred_unres.a$fcst$dc.train.ts[, 1]
+obs = as.numeric(dc.test.ts)
+100 * mean(abs(preds.unres - obs) / obs)
+```
+
+```{r}
+pred_res.a$fcst$dc.train.ts
 ```
 
 
+```{r}
+pred_unres.a$fcst$dc.train.ts
+```
+*Response*
 
 
 
@@ -614,10 +635,44 @@ Forecast the 9 months of available data using the unrestricted and restricted VA
 
 
 
+## Question 3c
+
+Perform a Granger Causality analysis using Wald test to evaluate whether any of the economic indicators lead DC. Would any of the indicators help in predicting or explaining DC's average electricity prices for future months? Provide your interpretation based on the Granger causality as well as for forecasting comparison in (3b). Compare this analysis with the findings in (2e). For this question, use the unrestricted VAR model from Question 3a.
+
+```{r}
+## Granger Causality: Wald Test
+coef.dc.c <- coefficients(model.a)$dc.train.ts[-(5 * 2 + 1), 1]
+var.model.c <- vcov(model.a)[2:11, 2:11]
+#         wald.test(b = coef.dc.c, var.model.c, Terms = seq(2, 5 * 2, 5))
+```
+
+```{r}
+#    wald.test(b = coef.dc.c, var.model.c, Terms = seq(3, 5 * 2, 5))
+```
+
+
+```{r}
+#     wald.test(b = coef.dc.3c, var.model.c, Terms = seq(4, 5 * 2, 5))
+```
+
+
+```{r}
+#     wald.test(b = coef.dc.3c, var.model.c, Terms = seq(5, 5 * 2, 5))
+```
+
+*Response*
 
 
 
 
+
+
+
+# Question 4: Reflection
+
+From what you encountered above and your conceptual understanding of VAR modelling, reflect on the relative strengths and weaknesses of the modelling approach. Particularly, you will need to put this analysis into the perspective of the results you found and any relevant information in regards to the job market(or even the COVID-19 pandemic disruption) you might be potentially able to link them to.
+
+*Response*
 
 
 
