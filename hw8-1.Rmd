@@ -173,6 +173,7 @@ arima_pred$pred[1] + c(-1, 1) * qnorm((1 - 0.05 / 2)) * arima_pred$se[1]
 arima_pred$pred[2] + c(-1, 1) * qnorm((1 - 0.05 / 2)) * arima_pred$se[2]
 ```
 
+*Response*
 
 
 
@@ -180,6 +181,90 @@ arima_pred$pred[2] + c(-1, 1) * qnorm((1 - 0.05 / 2)) * arima_pred$se[2]
 
 
 
+## Question 1c
+
+Perform a similar analysis as in (1b) but this time applying ARIMA to the DC time series training dataset. Assume p,q belong to [0,5] and d belongs to [0,1]. Compare the forecast and discuss why these are different or similar from the testing data. Also evaluate the prediction intervals with a 95% confidence level, and compare the results of the forecast with the analysis in Question 1b by overlaying the ARMA and ARIMA predictions on the observed data.
+
+```{r}
+test_model <- function(p, d, q) {
+mod = arima(dc.train.ts, order = c(p, d, q), method = "ML")
+current.aic = AIC(mod)
+df = data.frame(p, d, q, current.aic)
+names(df) <- c("p", "d", "q", "AIC")
+# print(paste(p, d, q, current.aic, sep = " "))
+return(df)
+}
+orders <- data.frame(Inf, Inf, Inf, Inf)
+names(orders) <- c("p", "d", "q", "AIC")
+for (p in 0:5) {
+for (d in 0:1) {
+for (q in 0:5) {
+possibleError <- tryCatch(
+orders <- rbind(orders, test_model(p, d, q)),
+error = function(e) {}
+)
+if (inherits(possibleError, "error"))
+next
+}
+}
+}
+orders <- orders[order(-orders$AIC), ]
+tail(orders)
+
+```
+
+
+```{r}
+arima.dc <- arima(dc.train.ts, order = c(4, 1, 2), method = 'ML')
+arima_pred1 <- as.vector(predict(arima.dc, n.ahead = 2))
+#### Test for Uncorrelated Residuals for the final model
+Box.test(
+arima.gdp$resid,
+lag = (4 + 2 + 1),
+type = "Box-Pierce",
+fitdf = (4 + 2)
+)
+```
+```{r}
+jarque.bera.test(resid(arima.dc))
+```
+```{r}
+shapiro.test(resid(arima.dc))
+```
+```{r}
+arima_pred1
+dc.test.ts
+```
+
+```{r}
+# 95% Prediction Intervals
+arima_pred1$pred[1] + c(-1, 1) * qnorm((1 - 0.05 / 2)) * arima_pred1$se[1]
+
+arima_pred1$pred[2] + c(-1, 1) * qnorm((1 - 0.05 / 2)) * arima_pred1$se[2]
+```
+
+*Response*
+
+
+
+
+
+
+
+
+
+
+
+
+# Question 2: Multivariate Analysis using VAR modeling
+
+For this question, divide the entire average electricity data (all variables) into training data (excluding the last 9 months of 2023) and testing data (the last 9 of 2023). You will apply the modeling to the training data, and we will forecast the test data.
+
+## Question 2a
+
+Apply the VAR model to the multivariate time series including all 4 states' average electricity data. (Note that you will apply VAR to the training data.) Identify the VAR order using both AIC and BIC and compare (use a lag max of 10). If the selected order using AIC is larger than the selected order than selected using BIC, apply the Wald test to evaluate whether a smaller order than the one selected with AIC would be a better choice, meaning the smaller order model would perform similarly than the larger order model. Interpret the order selection.
+
+This can be done by following the below substeps:- 1)Combine the variables into a multivariate dataset 2) select/display var orders and isolate models using AIC and BIC orders 3)Isolate coefficients and covariances from the AIC model 4) applying the Wald test to the values obtained from the AIC model, but would not be present in the BIC model. You can run a single Wald test for each variable, with all the lagged coefficients for that particular variable, in all resulting in 4 wald tests.
 
 
 
