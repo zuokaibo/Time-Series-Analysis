@@ -174,10 +174,7 @@ arima_pred$pred[2] + c(-1, 1) * qnorm((1 - 0.05 / 2)) * arima_pred$se[2]
 ```
 
 *Response*
-
-
-
-
+indicator of DC state has an increasing trend in general. it also has a dramatic change on volatility, huge ups and downs. from the residual plots, it roughly follows normal distribution, but on both side of qq plot, it diverges a little bit. 
 
 
 
