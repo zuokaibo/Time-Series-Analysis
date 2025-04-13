@@ -172,9 +172,8 @@ arima_pred$pred[1] + c(-1, 1) * qnorm((1 - 0.05 / 2)) * arima_pred$se[1]
 
 arima_pred$pred[2] + c(-1, 1) * qnorm((1 - 0.05 / 2)) * arima_pred$se[2]
 ```
-
 *Response*
-indicator of DC state has an increasing trend in general. it also has a dramatic change on volatility, huge ups and downs. from the residual plots, it roughly follows normal distribution, but on both side of qq plot, it diverges a little bit. 
+indicator of DC state has an increasing trend in general. it also has a dramatic change on volatility, huge ups and downs. from the residual plots, it roughly follows normal distribution, but on both sides of qq plot, it diverges a little bit. 
 
 
 
@@ -236,14 +235,7 @@ arima_pred1$pred[2] + c(-1, 1) * qnorm((1 - 0.05 / 2)) * arima_pred1$se[2]
 ```
 
 *Response*
-
-
-
-
-
-
-
-
+JB and SW indicate the normality in residual and Box tests suggests that we should reject the null hypothesis that residuals do not exhibit serial correlation or heteroscedasticity. the predicted values are within 95% confidence interval, meaning the predicted value is good at 95% level, indicating the model is a good fit for now.  
 
 
 
