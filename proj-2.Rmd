@@ -1,0 +1,27 @@
+---
+title: "Untitled"
+author: "TSA Pro-2"
+date: "2025-04-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(mgcv)
+library(ggplot2)
+library(ggfortify)
+library(TSA)
+library(dynlm)
+library(stats)
+library(PerformanceAnalytics)
+library(fable)
+library(reshape2)
+library(astsa)
+library(forecast)
+library(tidyverse)
+library(rugarch)
+```
+
