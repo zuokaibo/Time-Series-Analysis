@@ -383,15 +383,15 @@ min.orders
 ```{r}
 ## remove those identified extreme points from total sales and new orders
 
-## first to remove max and min value of tatal sales from dataframe, which is (date) 0001-10-01 and 2020-04-01
+## first to remove one max and two min values of tatal sales from dataframe, which is (date) 0001-10-01 and 2020-04-01
 data2 = data2[data2$Total.Sales < 22.055,	]
-data2 = data2[data2$Total.Sales > 8.834	, ]
+data2 = data2[data2$Total.Sales > 11.736, ]
 
-## first to remove min value of new orders from dataframe, which is (date) 2020-04-01 since it was during Covid. 
+## first to remove two min values of new orders from dataframe, which is (date) 2020-04-01 since it was during Covid. 
 
-#data2 = data2[data2$New.Orders < 64455, ]
+data2 = data2[data2$New.Orders < 64455, ]
 
-data2 = data2[data2$New.Orders > 18900,	]
+data2 = data2[data2$New.Orders > 24561	,	]
 
 data2
 ```
@@ -399,10 +399,18 @@ data2
 
 ```{r}
 ## now convert the data with extreme values removed to time series. 
-
+new.sales = ts(data2$Total.Sales, start = c(2000,1,1), frequency = 12)
+new.orders = ts(data2$New.Orders, start = c(2000,1,1), frequency = 12)
 
 ```
 
+```{r}
+new.sales.plot = autoplot(new.sales) + xlab("date") + ylab("sales") + ggtitle("Total Sales")
+new.sales.plot
+
+new.orders.plot = autoplot(new.orders) + xlab("data") + ylab("orders") + ggtitle("New Orders")
+new.orders.plot
+```
 
 
 
