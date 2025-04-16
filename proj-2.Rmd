@@ -25,3 +25,601 @@ library(tidyverse)
 library(rugarch)
 ```
 
+```{r}
+data = read.csv("VehicleData-1.csv", header = T)
+data$DATE = as.Date(data$DATE, format =  "%m/%d/%Y")
+
+data %>% mutate_all(~replace(., is.nan(.), 0))
+
+head(data)
+
+sales = ts(data$Total.Sales, start = c(2000,1,1), frequency = 12 )
+orders = ts(data$New.Orders, start = c(2000,1,1), frequency = 12)
+
+```
+
+
+```{r}
+sales.plot = autoplot(sales) + xlab("date") + ylab("sales") + ggtitle("Total Sales")
+sales.plot
+
+orders.plot = autoplot(orders) + xlab("data") + ylab("orders") + ggtitle("New Orders")
+orders.plot
+
+newplots = cbind(sales, orders)
+new.plots = autoplot(newplots, facets = F) + scale_y_continuous(trans = "log10")
+new.plots
+```
+
+```{r}
+acf(sales, lag.max = 200)
+pacf(sales, lag.max = 200)
+
+acf(orders, lag.max = 100)
+pacf(orders, lag.max = 100)
+
+
+##### (not sure if code below is correct, to check a relation between two univariate time series variables)
+
+## checking relation between new orders and total sales within 12 month.
+total.sales  = as.numeric(sales)
+new.orders = as.numeric(orders)
+#astsa::lag2.plot(new.orders, total.sales, 12)
+
+## checking correlation coefficient between two time series variables: new orders and total sales
+#ccf(new.orders, total.sales)
+```
+
+```{r}
+## X-axis points converted to 0-1 scale
+sales.time.pts = c(1:length(sales))
+sales.time.pts = c(sales.time.pts - min(sales.time.pts))/max(sales.time.pts)
+
+orders.time.pts = c(1:length(orders))
+orders.time.pts = c(orders.time.pts - min(orders.time.pts))/max(orders.time.pts)
+
+## Splines Trend Estimation on sales
+sales.spline = gam(sales.time.pts~s(sales.time.pts))
+sales.spline.fit = ts(fitted(sales.spline),start=2000,frequency=12)
+
+## Splines Trend Estimation on orders
+orders.spline = gam(orders.time.pts~s(orders.time.pts))
+orders.spline.fit = ts(fitted(orders.spline), start = 2000, frequency = 12)
+
+
+## plot trends, but doesnt show up in the plot, need to fix this . 
+
+## add trend to total sales 
+plot(sales,ylab="Total Sales")
+lines(sales.spline.fit,lwd=2,col="brown")
+abline(sales.spline.fit[1],0,lwd=2,col="blue")
+
+## add trend to new orders
+plot(orders,ylab="New Orders")
+lines(orders.spline.fit,lwd=2,col="brown")
+abline(orders.spline.fit[1],0,lwd=2,col="blue")
+```
+
+```{r}
+## check seasonlity on sales
+sales.model1=lm(sales~harmonic(sales))
+summary(sales.model1)
+
+sales.model2=lm(sales~harmonic(sales,2))
+summary(sales.model2)
+
+## check seasonlity on sales
+orders.model1=lm(orders~harmonic(orders))
+summary(orders.model1)
+
+orders.model2=lm(orders~harmonic(orders,2))
+summary(orders.model2)
+
+```
+
+```{r}
+## Fit a non-parametric model for trend and linear model for seasonality on total sales
+sales.har = harmonic(sales,2)
+sales.gam.fit = gam(sales~s(sales.time.pts)+sales.har)
+sales.dif.fit.gam = ts((sales-fitted(sales.gam.fit)),start=2000,frequency=12)
+ts.plot(sales.dif.fit.gam,ylab="residual", main="Residual Process on Total sales")
+
+## Fit a non-parametric model for trend and linear model for seasonality on new orders
+orders.har = harmonic(orders,2)
+orders.gam.fit = gam(orders~s(orders.time.pts)+orders.har)
+orders.dif.fit.gam = ts((orders-fitted(orders.gam.fit)),start=2000,frequency=12)
+ts.plot(orders.dif.fit.gam,ylab="residual", main="Residual Process on New orders")
+```
+
+```{r}
+##  fitting arima model on sales 
+
+## differencing with order 1
+new.data.sales = sales
+
+# 60 is the 20% of length of sales
+sales.train = new.data.sales[1:(length(new.data.sales) - 60)]
+sales.test = new.data.sales[(length(new.data.sales)- 60 + 1) : length(new.data.sales)]
+# reference: lecture notes from module 2
+n = length(sales.train)
+norder = 7
+p = c(1:norder)-1
+q = c(1:norder)-1
+
+aic = matrix(0, norder, norder)
+
+# differencing with order 1
+for (i in 1:norder) {
+  for (j in 1:norder) {
+    modij = arima(sales.train, order=c(p[i], 1, q[j]), method = "ML", include.mean = FALSE)
+    aic[i, j] = modij$aic + 2 * (p[i] + q[j] +1)  * (p[i] + q[j]) / (n - p[i] - q[j] - 1)
+  } 
+}
+
+indexp = rep(c(1:norder),norder)
+indexq = rep(c(1:norder),each=norder)
+indexaic = which(aic == min(aic))
+porder = indexp[indexaic]-1
+qorder = indexq[indexaic]-1
+porder 
+qorder
+
+sales.final.diff.one = arima(sales.train, order = c(porder, 1, qorder), method = "ML")
+sales.final.diff.one
+
+```
+
+```{r}
+##  fitting arima model on orders 
+
+## differencing with order 1
+new.data.orders = orders
+
+# 60 is the 20% of length of sales
+orders.train = new.data.orders[1:(length(new.data.orders) - 60)]
+orders.test = new.data.orders[(length(new.data.orders)- 60 + 1) : length(new.data.orders)]
+# reference: lecture notes from module 2
+n = length(orders.train)
+norder = 7
+p = c(1:norder)-1
+q = c(1:norder)-1
+
+aic = matrix(0, norder, norder)
+
+# differencing with order 1
+for (i in 1:norder) {
+  for (j in 1:norder) {
+    modij = arima(orders.train, order=c(p[i], 1, q[j]), method = "ML", include.mean = FALSE)
+    aic[i, j] = modij$aic + 2 * (p[i] + q[j] +1)  * (p[i] + q[j]) / (n - p[i] - q[j] - 1)
+  } 
+}
+
+indexp = rep(c(1:norder),norder)
+indexq = rep(c(1:norder),each=norder)
+indexaic = which(aic == min(aic))
+porder = indexp[indexaic]-1
+qorder = indexq[indexaic]-1
+porder 
+qorder
+
+orders.final.diff.one = arima(orders.train, order = c(porder, 1, qorder), method = "ML")
+orders.final.diff.one
+```
+
+```{r}
+## arima evaluation on sales
+sales.resid = resid(sales.final.diff.one)
+plot(sales.resid, main = "Residual plot of total sales ( p =  3 & q = 0)")
+acf(sales.resid, lag.max = 200,  main = "Residual ACF of total sales ( p =  3 & q = 0)")
+pacf(sales.resid, lag.max = 200, main = "Residual PACF of total sales ( p =  3 & q = 0)")
+Box.test(sales.resid, lag = ( 0+3+1 ), type = "Ljung-Box", fitdf = (0+3))
+
+
+## arima evaluation on orders
+orders.resid = resid(sales.final.diff.one)
+plot(orders.resid, main = "Residual plot of New orders ( p =  5 & q = 6)")
+acf(orders.resid, lag.max = 200,  main = "Residual ACF of New orders ( p =  5 & q = 6)")
+pacf(orders.resid, lag.max = 200, main = "Residual PACF of New orders ( p =  5 & q = 6)")
+Box.test(orders.resid, lag = ( 5+6+1 ), type = "Ljung-Box", fitdf = (5+6))
+```
+
+```{r}
+## checking garch order on Total sales with p = 3, q = 0, d= 1
+final.bic = Inf
+final.order = c(0,0)
+sales.test.garch = function(m, n) {
+  spec = ugarchspec(variance.model = list(garchOrder = c(m, n)), mean.model = list(armaOrder=c(3,0),include.mean = T), distribution.model = "std")
+  fit = ugarchfit(spec, sales.train, solver= "hybrid")
+  current.bic = infocriteria(fit)[2]
+  bicdata = data.frame(m,n,current.bic)
+  names(bicdata) = c("m","n","BIC")
+  print(paste(m,n,current.bic, sep=" "))
+  return(bicdata)
+}
+
+orders = data.frame(Inf, Inf, Inf)
+names(orders) = c("m", "n", "BIC")
+
+for (m in 0:2) for (n in 0:2) {
+  Error = tryCatch(orders = rbind(orders, sales.test.garch(m, n)), error = function(e) e) 
+  if (inherits(Error, "error"))
+    next
+}
+```
+
+```{r}
+## checking garch order on New orders  with p = 3, q = 0, d= 1
+final.bic = Inf
+final.order = c(0,0)
+orders.test.garch = function(m, n) {
+  spec = ugarchspec(variance.model = list(garchOrder = c(m, n)), mean.model = list(armaOrder=c(5,6),include.mean = T), distribution.model = "std")
+  fit = ugarchfit(spec, orders.train, solver= "hybrid")
+  current.bic = infocriteria(fit)[2]
+  #garchforecast = ugarchforecast(fitORspec = fit, n.ahead = orders.test)
+  bicdata = data.frame(m,n,current.bic)
+  names(bicdata) = c("m","n","BIC")
+  print(paste(m,n,current.bic, sep=" "))
+  return(bicdata)
+}
+
+order = data.frame(Inf, Inf, Inf)
+names(order) = c("m", "n", "BIC")
+
+for (m in 0:2) for (n in 0:2) {
+  Error = tryCatch(order = rbind(orders, orders.test.garch(m, n)), error = function(e) e) 
+  if (inherits(Error, "error"))
+    next
+}
+```
+
+```{r}
+## fit optimal orders in arma garch model (Total sales)
+garchspec.sales = ugarchspec(variance.model = list(garchOrder = c(1,0)), mean.model = list(armaOrder = c(3,0),include.mean = T), distribution.model = "std")
+
+garchfit.sales = ugarchfit(garchspec.sales, sales.train, solver="hybrid")
+
+garchforecast.sales = ugarchforecast(fitORspec = garchfit.sales, n.ahead = 100)
+
+## predicted mean
+garchmean.sales = fitted(garchfit.sales)
+#garchmean
+
+## predicted volatilities
+garchvola.sales = sigma(garchfit.sales)
+#garchvola
+plot(garchvola.sales, main = "volatilities of Total sales")
+```
+
+```{r}
+## fit optimal orders in arma garch model (New orders)
+garchspec.orders = ugarchspec(variance.model = list(garchOrder = c(1,1)), mean.model = list(armaOrder = c(5,6),include.mean = T), distribution.model = "std")
+
+garchfit.orders = ugarchfit(garchspec.orders, orders.train, solver="hybrid")
+
+garchforecast.orders = ugarchforecast(fitORspec = garchfit.orders, n.ahead = 100)
+
+## predicted mean
+garchmean.orders = fitted(garchfit.orders)
+#garchmean
+
+## predicted volatilities
+garchvola.orders = sigma(garchfit.orders)
+#garchvola
+plot(garchvola.orders, main = "Volatilities of New Orders")
+```
+
+```{r}
+cor(garchvola.sales,garchvola.orders)
+```
+
+
+### The part below is multivariate time series. 
+
+```{r}
+library(data.table)
+library(vars)
+library(xts)
+library(mgcv)
+library(stats)
+library(tseries)
+library(aod)
+```
+
+
+####### 
+(1)I checked plots of total sales and new orders from original data. 
+(3)Identify max and min values in total sales and new orders. the min values in total sales and new orders happened to be on the same date 2020-04-01.
+(2)I gave dataframe a new name data2 (just incase in later we might need some variables that i built under original dataframe called data.), I have removed max and min values in the total sales, the date is 0001-10-01 and 2020-04-01, also removed min value of new orders but not max value of new orders, since the min value appeared during covid, but could not find a reason to remove max value.
+(4)Compare the output from the code with the value in the plots of total sales and new orders. they seemed match each other. so i kept the data2 with the extreme values in total sales and new orders removed. 
+
+
+
+```{r}
+sales.plot = autoplot(sales) + xlab("date") + ylab("sales") + ggtitle("Total Sales")
+sales.plot
+
+orders.plot = autoplot(orders) + xlab("data") + ylab("orders") + ggtitle("New Orders")
+orders.plot
+
+newplots = cbind(sales, orders)
+new.plots = autoplot(newplots, facets = F) + scale_y_continuous(trans = "log10")
+new.plots
+```
+
+
+```{r}
+##### this chunk of the code below is used to identify and remove extreme points
+
+# here i checked extreme points in the original data without convert them to time series. 
+data2 = read.csv("VehicleData-1.csv", header = T)
+data2$DATE = as.Date(data$DATE, format =  "%m/%d/%Y")
+
+data2 %>% mutate_all(~replace(., is.nan(.), 0))
+
+tail(data2)
+```
+
+
+```{r}
+## identify extreme points in the total sales.
+max.sales = data2[which.max(data2$Total.Sales), ]
+max.sales
+
+min.sales = data2[which.min(data2$Total.Sales), ]
+min.sales
+```
+
+
+```{r}
+## identify extreme points in the new orders
+max.orders = data2[which.max(data2$New.Orders), ]
+max.orders
+
+min.orders = data2[which.min(data2$New.Orders), ]
+min.orders
+```
+
+
+```{r}
+## remove those identified extreme points from total sales and new orders
+
+## first to remove max and min value of tatal sales from dataframe, which is (date) 0001-10-01 and 2020-04-01
+data2 = data2[data2$Total.Sales < 22.055,	]
+data2 = data2[data2$Total.Sales > 8.834	, ]
+
+## first to remove min value of new orders from dataframe, which is (date) 2020-04-01 since it was during Covid. 
+
+#data2 = data2[data2$New.Orders < 64455, ]
+
+data2 = data2[data2$New.Orders > 18900,	]
+
+data2
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
