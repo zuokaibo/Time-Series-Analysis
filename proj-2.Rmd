@@ -397,6 +397,11 @@ data2
 ```
 
 
+```{r}
+## now convert the data with extreme values removed to time series. 
+
+
+```
 
 
 
