@@ -394,9 +394,21 @@ data2 = data2[data2$New.Orders < 64455, ]
 data2 = data2[data2$New.Orders > 24561	,	]
 
 data2
-
-str(data2)
 ```
+
+```{r}
+#### since total sales is given by here seasonally adjusted annual rates, I must translate/calculate them to the same measure that match the units of new orders
+# ggregate(Total.Sales ~ DATE, data2, mean)
+
+```
+
+
+
+
+
+
+
+
 
 ```{r}
 ## now convert the data with extreme values removed to time series. 
@@ -414,7 +426,26 @@ new.orders.plot
 
 ```
 
+```{r}
+library(scales)
+new.orders.plot = autoplot(new.orders) + xlab("data") + ylab("orders") + ggtitle("New Orders") + scale_y_continuous(labels = scales::percent)
+new.orders.plot
 
+```
+
+```{r}
+### since the value of Total sales is seasonally adjusted annual rate, I need to translate the value of new orders to seasonally adjusted annual rate too 
+year = format(data2$DATE, "%y")
+new.mean = aggregate(New.Orders~year, data2, mean)
+#new.mean[,1]
+#new.mean[,2]
+newdata = data.frame(year = new.mean[,1], year_mean = new.mean[,2])
+newdata
+
+
+
+
+```
 
 
 
