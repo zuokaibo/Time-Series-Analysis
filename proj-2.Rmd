@@ -2,7 +2,9 @@
 title: "Untitled"
 author: "TSA Pro-2"
 date: "2025-04-15"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -58,7 +60,6 @@ pacf(sales, lag.max = 200)
 acf(orders, lag.max = 100)
 pacf(orders, lag.max = 100)
 
-
 ##### (not sure if code below is correct, to check a relation between two univariate time series variables)
 
 ## checking relation between new orders and total sales within 12 month.
@@ -67,7 +68,7 @@ new.orders = as.numeric(orders)
 #astsa::lag2.plot(new.orders, total.sales, 12)
 
 ## checking correlation coefficient between two time series variables: new orders and total sales
-#ccf(new.orders, total.sales)
+ccf(new.orders, total.sales)
 ```
 
 ```{r}
@@ -313,6 +314,11 @@ cor(garchvola.sales,garchvola.orders)
 ```
 
 
+
+
+
+
+
 ### The part below is multivariate time series. 
 
 ```{r}
@@ -335,15 +341,16 @@ library(aod)
 
 
 ```{r}
-sales.plot = autoplot(sales) + xlab("date") + ylab("sales") + ggtitle("Total Sales")
-sales.plot
+#sales.plot = autoplot(sales) + xlab("date") + ylab("sales") + ggtitle("Total Sales")
+#sales.plot
 
-orders.plot = autoplot(orders) + xlab("data") + ylab("orders") + ggtitle("New Orders")
-orders.plot
+#orders.plot = autoplot(orders) + xlab("data") + ylab("orders") + ggtitle("New Orders")
+#orders.plot
 
-newplots = cbind(sales, orders)
-new.plots = autoplot(newplots, facets = F) + scale_y_continuous(trans = "log10")
-new.plots
+#newplots = cbind(sales, orders)
+#new.plots = autoplot(newplots, facets = F) + scale_y_continuous(trans = "log10")
+#new.plots
+
 ```
 
 
@@ -353,10 +360,7 @@ new.plots
 # here i checked extreme points in the original data without convert them to time series. 
 data2 = read.csv("VehicleData-1.csv", header = T)
 data2$DATE = as.Date(data$DATE, format =  "%m/%d/%Y")
-
 data2 %>% mutate_all(~replace(., is.nan(.), 0))
-
-tail(data2)
 ```
 
 
@@ -388,30 +392,14 @@ data2 = data2[data2$Total.Sales < 22.055,	]
 data2 = data2[data2$Total.Sales > 11.736, ]
 
 ## first to remove two min values of new orders from dataframe, which is (date) 2020-04-01 since it was during Covid. 
-
 data2 = data2[data2$New.Orders < 64455, ]
-
 data2 = data2[data2$New.Orders > 24561	,	]
 
 data2
 ```
 
 ```{r}
-#### since total sales is given by here seasonally adjusted annual rates, I must translate/calculate them to the same measure that match the units of new orders
-# ggregate(Total.Sales ~ DATE, data2, mean)
-
-```
-
-
-
-
-
-
-
-
-
-```{r}
-## now convert the data with extreme values removed to time series. 
+## now convert the data with extreme values removed 
 new.sales = ts(data2$Total.Sales, start = c(2000,1,1), frequency = 12)
 new.orders = ts(data2$New.Orders, start = c(2000,1,1), frequency = 12)
 
@@ -434,7 +422,8 @@ new.orders.plot
 ```
 
 ```{r}
-### since the value of Total sales is seasonally adjusted annual rate, I need to translate the value of new orders to seasonally adjusted annual rate too 
+### since the value of Total sales is seasonally adjusted annual rate, I need to translate the value of new orders to seasonally adjusted annual rate too just to match the total sales with same units.
+
 year = format(data2$DATE, "%y")
 new.mean = aggregate(New.Orders~year, data2, mean)
 #new.mean[,1]
@@ -442,38 +431,431 @@ new.mean = aggregate(New.Orders~year, data2, mean)
 newdata = data.frame(year = new.mean[,1], year_mean = new.mean[,2])
 newdata
 
+library(dplyr)
+newdata = newdata%>%mutate(month.mean = year_mean/12)
+newdata
+data2 = data2%>%separate(DATE, c("year", "month", "day"), sep = "-")
 
+split.year = split(data2, data2$year)
 
+data2
 
 ```
 
+```{r}
+zero = data.frame(data2[data2$year == 0, ])
+zero$rate = 0
+for (a in 1:length(zero$New.Orders)){
+  zero$rate[a] = zero$New.Orders[a]/ 3242.389 
+}
+
+one = data.frame(data2[data2$year == 1, ])
+one$rate = 0
+for (a in 1:length(one$New.Orders)){
+  one$rate[a] = one$New.Orders[a]/ 2962.939	
+}
+
+two = data.frame(data2[data2$year == 2, ])
+two$rate = 0
+for (a in 1:length(two$New.Orders)){
+  two$rate[a] = two$New.Orders[a]/ 3267.312		
+}
+
+three = data.frame(data2[data2$year == 3, ])
+three$rate = 0
+for (a in 1:length(three$New.Orders)){
+  three$rate[a] = three$New.Orders[a]/ 3428.694		
+}
+
+four = data.frame(data2[data2$year == 4, ])
+four$rate = 0
+for (a in 1:length(four$New.Orders)){
+  four$rate[a] = four$New.Orders[a]/ 3415.549			
+}
+
+five = data.frame(data2[data2$year == 5, ])
+five$rate = 0
+for (a in 1:length(five$New.Orders)){
+  five$rate[a] = five$New.Orders[a]/ 3492.632				
+}
+
+six = data.frame(data2[data2$year == 6, ])
+six$rate = 0
+for (a in 1:length(six$New.Orders)){
+  six$rate[a] = six$New.Orders[a]/ 3481.326				
+}
+
+seven = data.frame(data2[data2$year == 7, ])
+seven$rate = 0
+for (a in 1:length(seven$New.Orders)){
+  seven$rate[a] = seven$New.Orders[a]/ 3461.674					
+}
+
+eight = data.frame(data2[data2$year == 8, ])
+eight$rate = 0
+for (a in 1:length(eight$New.Orders)){
+  eight$rate[a] = eight$New.Orders[a]/ 2996.361					
+}
+
+nigh = data.frame(data2[data2$year == 9, ])
+nigh$rate = 0
+for (a in 1:length(nigh$New.Orders)){
+  nigh$rate[a] = nigh$New.Orders[a]/ 2122.000					
+}
+
+ten = data.frame(data2[data2$year == 10, ])
+ten$rate = 0
+for (a in 1:length(ten$New.Orders)){
+  ten$rate[a] = ten$New.Orders[a]/ 2890.646						
+}
+
+ele = data.frame(data2[data2$year == 11, ])
+ele$rate = 0
+for (a in 1:length(ele$New.Orders)){
+  ele$rate[a] = ele$New.Orders[a]/ 3116.896						
+} 
+
+twe = data.frame(data2[data2$year == 12, ])
+twe$rate = 0
+for (a in 1:length(twe$New.Orders)){
+  twe$rate[a] = twe$New.Orders[a]/ 3542.403					
+} 
+
+thirteen = data.frame(data2[data2$year == 13, ])
+thirteen$rate = 0
+for (a in 1:length(thirteen$New.Orders)){
+  thirteen$rate[a] = thirteen$New.Orders[a]/ 3791.562					
+} 
+
+fourteen = data.frame(data2[data2$year == 14, ])
+fourteen$rate = 0
+for (a in 1:length(fourteen$New.Orders)){
+  fourteen$rate[a] = fourteen$New.Orders[a]/ 4179.000					
+} 
+
+fif = data.frame(data2[data2$year == 15, ])
+fif$rate = 0
+for (a in 1:length(fif$New.Orders)){
+  fif$rate[a] = fif$New.Orders[a]/ 4457.993					
+} 
+
+sixth = data.frame(data2[data2$year == 16, ])
+sixth$rate = 0
+for (a in 1:length(sixth$New.Orders)){
+  sixth$rate[a] = sixth$New.Orders[a]/ 4449.278						
+} 
+
+sev = data.frame(data2[data2$year == 17, ])
+sev$rate = 0
+for (a in 1:length(sev$New.Orders)){
+  sev$rate[a] = sev$New.Orders[a]/ 4418.833						
+} 
+
+ei = data.frame(data2[data2$year == 18, ])
+ei$rate = 0
+for (a in 1:length(ei$New.Orders)){
+  ei$rate[a] = ei$New.Orders[a]/ 4641.597						
+} 
+
+ni = data.frame(data2[data2$year == 19, ])
+ni$rate = 0
+for (a in 1:length(ni$New.Orders)){
+  ni$rate[a] = ni$New.Orders[a]/ 4545.285							
+} 
+
+tw = data.frame(data2[data2$year == 20, ])
+tw$rate = 0
+for (a in 1:length(tw$New.Orders)){
+  tw$rate[a] = tw$New.Orders[a]/ 4507.417							
+} 
+
+twone = data.frame(data2[data2$year == 21, ])
+twone$rate = 0
+for (a in 1:length(twone$New.Orders)){
+  twone$rate[a] = twone$New.Orders[a]/ 4389.403							
+} 
+
+twtw = data.frame(data2[data2$year == 22, ])
+twtw$rate = 0
+for (a in 1:length(twtw$New.Orders)){
+  twtw$rate[a] = twtw$New.Orders[a]/ 4914.208								
+} 
+
+twth = data.frame(data2[data2$year == 23, ])
+twth$rate = 0
+for (a in 1:length(twth$New.Orders)){
+  twth$rate[a] = twth$New.Orders[a]/ 5134.861								
+} 
+
+twfour = data.frame(data2[data2$year == 24, ])
+twfour$rate = 0
+for (a in 1:length(twfour$New.Orders)){
+  twfour$rate[a] = twfour$New.Orders[a]/ 5238.583								
+} 
+```
+
+```{r}
+newbind = rbind(zero,one, three,four,five,six,seven,eight,nigh, ten, ele, thirteen, fourteen, fif, sixth,sev, ei, ni, tw, twone, twtw, twth,twfour)
+
+#newbind = newbind%>%mutate(Date.new = make_date(year, month, day))
+
+newbind = newbind%>%mutate(date = ymd(paste(year, month, day)))
+
+newbind$date = as.Date(newbind$date, format =  "%m/%d/%Y")
+
+```
+
+```{r}
+newbind = data.frame(newbind)
+
+newdata = data.frame(subset(newbind, select = c(date, Total.Sales, rate)))
+
+colnames(newdata) = c("Date", "SAAR.Total.Sales", "SAAR.New.Orders")
+
+newdata
+
+new.sales.rate = ts(newdata$SAAR.Total.Sales, start = c(2000,1,1), frequency = 12)
+new.orders.rate = ts(newdata$SAAR.New.Orders, start = c(2000,1,1), frequency = 12)
+
+new.sales.rate.plot = autoplot(new.sales.rate) + xlab("date") + ylab("sales") + ggtitle("Total Sales Rate") 
+new.sales.rate.plot
+
+new.orders.rate.plot = autoplot(new.orders.rate) + xlab("data") + ylab("orders") + ggtitle("New Orders Rate")
+new.orders.rate.plot
+
+ts_data = ts(newdata[,-1],start=2000,frequency=12)
+autoplot(ts_data,main='SAAR of Total Sales  &  SAAR of New Orders',ylab="SAAR",xlab= 'Time')
+
+```
+
+```{r}
+diff_ts = diff(ts_data)
+autoplot(diff_ts, main="1st-order differenced SAAR of Total sales and New orders", ylab="SAAR", xlab="Time")
+```
+
+```{r}
+ggAcf(diff_ts[, "SAAR.Total.Sales"], lag.max=200, col="brown1", main="Differenced SAAR of Total Sales")
+```
 
 
+```{r}
+ggAcf(diff_ts[, "SAAR.New.Orders"], lag.max=200, col="darkturquoise", main="differenced SAAR of New Orders")
+```
+
+```{r}
+n = nrow(newdata)
+
+train_sales = ts(ts_data[(1:(n-9)), "SAAR.Total.Sales"], start = c(2000, 1, 1), frequency = 12)
+test_sales = ts(ts_data[(n-8):n,'SAAR.Total.Sales'], start=c(2023, 10, 1), frequency = 12)
+
+train_orders = ts(ts_data[(1:(n-9)), "SAAR.New.Orders"], start = c(2000, 1, 1), frequency = 12)
+test_orders = ts(ts_data[(n-8):n,'SAAR.Total.Sales'], start=c(2023, 10, 1), frequency = 12)
+
+```
+
+```{r}
+test_model = function(p, d, q) {
+  mod = arima(train_sales, order = c(p, d, q), method = "ML")
+  current.aic=AIC(mod)
+  df = data.frame(p,d,q,current.aic)
+  names(df)<-c("p","d","q","AIC")
+  #print(paste(p,d,q,current.aic,sep=""))
+  return(df)
+}
+
+orders = data.frame(Inf,Inf,Inf,Inf)
+names(orders) = c("p","d","q","AIC")
+for(p in 0:5){
+for(d in 0:1){
+for(q in 0:5){
+  possibleError<-tryCatch(
+  orders<-rbind(orders,test_model(p,d,q)),
+  error= function(e){}
+)
+  if(inherits(possibleError,"error"))
+    next
+}
+}
+}
+orders=orders[order(-orders$AIC), ]
+tail(orders)
+```
+
+```{r}
+final.model.arima = arima(train_sales, order= c(0,1,1), method= 'ML')
+predict.arima = predict(final.model.arima,h=9,level= c(95))
+```
+
+```{r}
+###TestforUncorrelatedResiduals
+Box.test(final.model.arima$resid,lag=(0+1+1),type="Box-Pierce",fitdf=(0+1))
+```
+
+```{r}
+Box.test(final.model.arima$resid,lag=(0+1+1),type="Ljung-Box",fitdf=(0+1))
+```
+
+```{r}
+jarque.bera.test(resid(final.model.arima))
+```
+
+```{r}
+shapiro.test(resid(final.model.arima))
+```
+
+```{r}
+train_data = cbind(train_sales, train_orders)
+test_data = cbind(test_sales,test_orders)
+```
+
+```{r}
+var.model <-VARselect(train_data, lag.max=10)
+var.model$selection
+```
+
+```{r}
+var.model.aic<-VAR(train_data,p = 2)
+var.model.bic<-VAR(train_data,p = 1)
+pord_1 = var.model.aic$p
+```
+
+```{r}
+### find coeff of sales and orders, 
+# two variables with aic order 2
+n = 2 
+p = 2
+
+## coeff and variance covariance matrix for sales 
+coef.sales = coefficients(var.model.aic)$train_sales[(n*p+1),  1]
+sales.i = 1 # because sales is the first column
+sales.index.min = 2 + (sales.i - 1) *(n*p+1)
+sales.index.max = (n*p+1) * sales.i
+sales.index = c(sales.index.min: sales.index.max)
+var1.sales = vcov(var.model.aic)[sales.index, sales.index]
 
 
+## coeff and variance covariance matrix for orders 
+coef.orders = coefficients(var.model.aic)$train_sales[(n*p+1),  1]
+orders.i = 2 # because sales is the second column
+orders.index.min = 2 + (orders.i - 1) *(n*p+1)
+orders.index.max = (n*p+1) * orders.i
+orders.index = c(orders.index.min: orders.index.max)
+var1.orders = vcov(var.model.aic)[orders.index, orders.index]
+
+```
+
+```{r}
+coef.sales.aic = coefficients(var.model.aic)$train_sales[-(2*2+1),1]
+cov.aic = vcov(var.model.aic)[2:5, 2:5]
+wald.test(b = coef.sales.aic, cov.aic, Terms = seq(1, 2*1, 2))
+```
+
+```{r}
+coef.orders.aic = coefficients(var.model.aic)$train_orders[-(2*2+1),1]
+cov.aic = vcov(var.model.aic)[7:10, 7:10]
+wald.test(b = coef.orders.aic, cov.aic, Terms = seq(1, 2*1, 2))
+```
 
 
+```{r}
+# here is the wald.test, but i cannt find out the value for Terms. 
+#wald.test(b=coef.sales, var1.sales, seq(1, 2*1, 2))
+#wald.test(b=coef.orders, var1.orders, seq(1, 2*1, 2))
+```
 
 
+```{r}
+# stepwise
+# Fit the initial full model for sales
+# use same lag variables as the VAR full model
+summary(var.model.aic)
+```
+
+```{r}
+# perform stepwise regression
+paste0("Sales Model")
+```
+```{r}
+model.sales=step(lm(y~.,data=var.model.aic$varresult$train_sales$model),direction= 'backward')
+```
+
+```{r}
+# perform stepwise regression
+paste0("Orders Model")
+```
+
+```{r}
+model.orders = step(lm(y~.,data=var.model.bic$varresult$train_orders$model),direction= 'backward')
+```
+
+```{r}
+var.restrict.aic = restrict(var.model.aic)
+var.restrict.aic
+```
 
 
+```{r}
+## ARCH: Constant Variance Assumption
+arch.test(var.restrict.aic)
+```
 
 
+```{r}
+##J-B: Normality Assumption
+normality.test(var.restrict.aic)
+```
 
+```{r}
+##Portmanteau: Uncorrelated Errors Assumption
+serial.test(var.restrict.aic)
+```
 
+```{r}
+var.pred = as.vector(predict(var.model.aic, n.ahead = 9))
+var.pred.res = as.vector(predict(var.restrict.aic, n.ahead = 9))
+```
 
+```{r}
+var.preds.sales = var.pred$fcst$train_sales[,1]
+var.preds.res.sales = var.pred.res$fcst$train_sales[,1]
+obs = as.numeric(test_sales)
+```
 
+```{r}
+#retrain ARIMA model
+final.model.arima = arima(train_sales, order = c(0, 1, 1), method = 'ML')
+predict.arima.9 = predict(final.model.arima, h = 9, level = c(95))
+```
 
+```{r}
+#All 3 predictions
+preds = cbind(test_sales, predict.arima.9$mean, var.preds.sales, var.preds.res.sales)
+preds
+```
 
+```{r}
+#MAPE&PMforunrestictedVAR
+paste0("MAPEforUnrestrictedVAR:", round(mean(abs(var.preds.sales-obs)/obs),5))
+```
+```{r}
+#MAPE&PMofrestrictedVAR
+paste0("MAPEforRestrictedVAR:", round(mean(abs(var.preds.res.sales-obs)/obs),5))
+```
 
-
-
-
-
-
-
-
-
+```{r}
+## Granger Causality: Wald Test
+coef.sales.aic <- coefficients(var.model.aic)$train_sales[-(2*2+1),1]
+cov.aic <- vcov(var.model.aic)[2:5, 2:5]
+print("Granger Causality: SAAR of Total Sales")
+wald.test(b = coef.sales.aic, cov.aic, Terms = seq(1, 2*1, 2))
+```
+```{r}
+coef.orders.aic = coefficients(var.model.aic)$train_orders[-(2*2+1),1]
+cov.aic = vcov(var.model.aic)[7:10, 7:10]
+print("Granger Causality: SAAR of New Orders")
+wald.test(b = coef.orders.aic, cov.aic, Terms = seq(1, 2*1, 2))
+```
+```
 
 
 
