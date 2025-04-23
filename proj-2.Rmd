@@ -624,17 +624,18 @@ new.orders.rate = ts(newdata$SAAR.New.Orders, start = c(2000,1,1), frequency = 1
 new.sales.rate.plot = autoplot(new.sales.rate) + xlab("Date") + ylab("SAAR of Total Sales") + ggtitle("Total Sales - Seasonally Adjusted Annual Rate") 
 new.sales.rate.plot
 
-new.orders.rate.plot = autoplot(new.orders.rate) + xlab("Data") + ylab("SAAR of New Orders") + ggtitle("New Orders - Seasonally Adjusted Annual Rate")
+new.orders.rate.plot = autoplot(new.orders.rate) + xlab("Date") + ylab("SAAR of New Orders") + ggtitle("New Orders - Seasonally Adjusted Annual Rate")
 new.orders.rate.plot
 
 ts_data = ts(newdata[,-1],start=2000,frequency=12)
-autoplot(ts_data,main='SAAR of Total Sales  &  SAAR of New Orders',ylab="SAAR",xlab= 'Time')
+autoplot(ts_data,main='SAAR of Total Sales  &  SAAR of New Orders',ylab="SAAR",xlab= 'Date')
 
 ```
 
 ```{r}
 diff_ts = diff(ts_data)
-autoplot(diff_ts, main="1st-order differenced SAAR of Total sales and New orders", ylab="SAAR", xlab="Time")
+head(diff_ts)
+autoplot(diff_ts, main="1st-order Differenced SAAR of Total Sales and New Orders", ylab="1st-order Differenced SAAR", xlab="Date")
 ```
 
 ```{r}
@@ -645,6 +646,10 @@ ggAcf(diff_ts[, "SAAR.Total.Sales"], lag.max=200, col="brown1", main="Difference
 ```{r}
 ggAcf(diff_ts[, "SAAR.New.Orders"], lag.max=200, col="darkturquoise", main="differenced SAAR of New Orders")
 ```
+
+From ACFs, I think it is now white noise since most lags are within 95% confidence band, some of the lags are outside the confidence band, due to the rest 5%.
+
+
 
 ```{r}
 n = nrow(newdata)
