@@ -329,6 +329,18 @@ library(mgcv)
 library(stats)
 library(tseries)
 library(aod)
+library(zoo)
+library(lubridate)
+library(fGarch)
+library(ggpubr)
+library(ggfortify)
+library(quantmod)
+library(urca)
+library(forecast)
+library(mFilter)
+library(TSstudio)
+library(tidyverse)
+library(bruceR)
 ```
 
 
@@ -621,10 +633,10 @@ length(newdata$SAAR.New.Orders)
 new.sales.rate = ts(newdata$SAAR.Total.Sales, start = c(2000,1,1), frequency = 12)
 new.orders.rate = ts(newdata$SAAR.New.Orders, start = c(2000,1,1), frequency = 12)
 
-new.sales.rate.plot = autoplot(new.sales.rate) + xlab("Date") + ylab("SAAR of Total Sales") + ggtitle("Total Sales - Seasonally Adjusted Annual Rate") 
+new.sales.rate.plot = autoplot(new.sales.rate) + xlab("Date") + ylab("Total Sales") + ggtitle("Total Sales - Seasonally Adjusted Annual Rate") 
 new.sales.rate.plot
 
-new.orders.rate.plot = autoplot(new.orders.rate) + xlab("Date") + ylab("SAAR of New Orders") + ggtitle("New Orders - Seasonally Adjusted Annual Rate")
+new.orders.rate.plot = autoplot(new.orders.rate) + xlab("Date") + ylab("New Orders") + ggtitle("New Orders - Seasonally Adjusted Annual Rate")
 new.orders.rate.plot
 
 ts_data = ts(newdata[,-1],start=2000,frequency=12)
@@ -647,226 +659,188 @@ ggAcf(diff_ts[, "SAAR.Total.Sales"], lag.max=200, col="brown1", main="Difference
 ggAcf(diff_ts[, "SAAR.New.Orders"], lag.max=200, col="darkturquoise", main="differenced SAAR of New Orders")
 ```
 
-From ACFs, I think it is now white noise since most lags are within 95% confidence band, some of the lags are outside the confidence band, due to the rest 5%.
-
+(1) From ACFs, I think it is now white noise since most lags are within 95% confidence band, some of the lags are outside the confidence band, due to the rest 5%.
+(2) Code below I will start using 1st differenced data, since I think it is a white noise after differencing
 
 
 ```{r}
-n = nrow(newdata)
 
-train_sales = ts(ts_data[(1:(n-9)), "SAAR.Total.Sales"], start = c(2000, 1, 1), frequency = 12)
-test_sales = ts(ts_data[(n-8):n,'SAAR.Total.Sales'], start=c(2023, 10, 1), frequency = 12)
-
-train_orders = ts(ts_data[(1:(n-9)), "SAAR.New.Orders"], start = c(2000, 1, 1), frequency = 12)
-test_orders = ts(ts_data[(n-8):n,'SAAR.Total.Sales'], start=c(2023, 10, 1), frequency = 12)
-
-```
-
-```{r}
-test_model = function(p, d, q) {
-  mod = arima(train_sales, order = c(p, d, q), method = "ML")
-  current.aic=AIC(mod)
-  df = data.frame(p,d,q,current.aic)
-  names(df)<-c("p","d","q","AIC")
-  #print(paste(p,d,q,current.aic,sep=""))
-  return(df)
-}
-
-orders = data.frame(Inf,Inf,Inf,Inf)
-names(orders) = c("p","d","q","AIC")
-for(p in 0:5){
-for(d in 0:1){
-for(q in 0:5){
-  possibleError<-tryCatch(
-  orders<-rbind(orders,test_model(p,d,q)),
-  error= function(e){}
-)
-  if(inherits(possibleError,"error"))
-    next
-}
-}
-}
-orders=orders[order(-orders$AIC), ]
-tail(orders)
-```
-
-```{r}
-final.model.arima = arima(train_sales, order= c(0,1,1), method= 'ML')
-predict.arima = predict(final.model.arima,h=9,level= c(95))
-```
-
-```{r}
-###TestforUncorrelatedResiduals
-Box.test(final.model.arima$resid,lag=(0+1+1),type="Box-Pierce",fitdf=(0+1))
-```
-
-```{r}
-Box.test(final.model.arima$resid,lag=(0+1+1),type="Ljung-Box",fitdf=(0+1))
-```
-
-```{r}
-jarque.bera.test(resid(final.model.arima))
-```
-
-```{r}
-shapiro.test(resid(final.model.arima))
-```
-
-```{r}
-train_data = cbind(train_sales, train_orders)
-test_data = cbind(test_sales,test_orders)
-```
-
-```{r}
-var.model <-VARselect(train_data, lag.max=10)
-var.model$selection
-```
-
-```{r}
-var.model.aic<-VAR(train_data,p = 2)
-var.model.bic<-VAR(train_data,p = 1)
-pord_1 = var.model.aic$p
-```
-
-```{r}
-### find coeff of sales and orders, 
-# two variables with aic order 2
-n = 2 
-p = 2
-
-## coeff and variance covariance matrix for sales 
-coef.sales = coefficients(var.model.aic)$train_sales[(n*p+1),  1]
-sales.i = 1 # because sales is the first column
-sales.index.min = 2 + (sales.i - 1) *(n*p+1)
-sales.index.max = (n*p+1) * sales.i
-sales.index = c(sales.index.min: sales.index.max)
-var1.sales = vcov(var.model.aic)[sales.index, sales.index]
-
-
-## coeff and variance covariance matrix for orders 
-coef.orders = coefficients(var.model.aic)$train_sales[(n*p+1),  1]
-orders.i = 2 # because sales is the second column
-orders.index.min = 2 + (orders.i - 1) *(n*p+1)
-orders.index.max = (n*p+1) * orders.i
-orders.index = c(orders.index.min: orders.index.max)
-var1.orders = vcov(var.model.aic)[orders.index, orders.index]
-
-```
-
-```{r}
-coef.sales.aic = coefficients(var.model.aic)$train_sales[-(2*2+1),1]
-cov.aic = vcov(var.model.aic)[2:5, 2:5]
-wald.test(b = coef.sales.aic, cov.aic, Terms = seq(1, 2*1, 2))
-```
-
-```{r}
-coef.orders.aic = coefficients(var.model.aic)$train_orders[-(2*2+1),1]
-cov.aic = vcov(var.model.aic)[7:10, 7:10]
-wald.test(b = coef.orders.aic, cov.aic, Terms = seq(1, 2*1, 2))
 ```
 
 
 ```{r}
-# here is the wald.test, but i cannt find out the value for Terms. 
-#wald.test(b=coef.sales, var1.sales, seq(1, 2*1, 2))
-#wald.test(b=coef.orders, var1.orders, seq(1, 2*1, 2))
+# I applied VAR model to the entire time series with 1st order differenced. 
+var.model.order = VARselect(diff_ts, lag.max = 20)
+var.model.order$selection
 ```
 
 
 ```{r}
-# stepwise
-# Fit the initial full model for sales
-# use same lag variables as the VAR full model
-summary(var.model.aic)
+var.aic.model = VAR(diff_ts, p = 8)
+summary(var.aic.model)
 ```
 
-```{r}
-# perform stepwise regression
-paste0("Sales Model")
-```
-```{r}
-model.sales=step(lm(y~.,data=var.model.aic$varresult$train_sales$model),direction= 'backward')
-```
+
 
 ```{r}
-# perform stepwise regression
-paste0("Orders Model")
-```
-
-```{r}
-model.orders = step(lm(y~.,data=var.model.bic$varresult$train_orders$model),direction= 'backward')
-```
-
-```{r}
-var.restrict.aic = restrict(var.model.aic)
-var.restrict.aic
+var.bic.model = VAR(diff_ts, p = 1)
+summary(var.bic.model)
 ```
 
 
 ```{r}
-## ARCH: Constant Variance Assumption
-arch.test(var.restrict.aic)
+plot(ts(residuals(var.aic.model), start = 2000), main = "Residual Processes")
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
 ```
 
 
 ```{r}
-##J-B: Normality Assumption
-normality.test(var.restrict.aic)
-```
 
-```{r}
-##Portmanteau: Uncorrelated Errors Assumption
-serial.test(var.restrict.aic)
-```
 
-```{r}
-var.pred = as.vector(predict(var.model.aic, n.ahead = 9))
-var.pred.res = as.vector(predict(var.restrict.aic, n.ahead = 9))
-```
-
-```{r}
-var.preds.sales = var.pred$fcst$train_sales[,1]
-var.preds.res.sales = var.pred.res$fcst$train_sales[,1]
-obs = as.numeric(test_sales)
-```
-
-```{r}
-#retrain ARIMA model
-final.model.arima = arima(train_sales, order = c(0, 1, 1), method = 'ML')
-predict.arima.9 = predict(final.model.arima, h = 9, level = c(95))
-```
-
-```{r}
-#All 3 predictions
-preds = cbind(test_sales, predict.arima.9$mean, var.preds.sales, var.preds.res.sales)
-preds
-```
-
-```{r}
-#MAPE&PMforunrestictedVAR
-paste0("MAPEforUnrestrictedVAR:", round(mean(abs(var.preds.sales-obs)/obs),5))
-```
-```{r}
-#MAPE&PMofrestrictedVAR
-paste0("MAPEforRestrictedVAR:", round(mean(abs(var.preds.res.sales-obs)/obs),5))
-```
-
-```{r}
-## Granger Causality: Wald Test
-coef.sales.aic <- coefficients(var.model.aic)$train_sales[-(2*2+1),1]
-cov.aic <- vcov(var.model.aic)[2:5, 2:5]
-print("Granger Causality: SAAR of Total Sales")
-wald.test(b = coef.sales.aic, cov.aic, Terms = seq(1, 2*1, 2))
-```
-```{r}
-coef.orders.aic = coefficients(var.model.aic)$train_orders[-(2*2+1),1]
-cov.aic = vcov(var.model.aic)[7:10, 7:10]
-print("Granger Causality: SAAR of New Orders")
-wald.test(b = coef.orders.aic, cov.aic, Terms = seq(1, 2*1, 2))
-```
 ```
 
 
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+
+
+
+
+
+
+
+
+
+```
 
 
 
