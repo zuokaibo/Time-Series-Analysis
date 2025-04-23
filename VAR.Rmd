@@ -1,0 +1,490 @@
+---
+title: "Proj-Var"
+output: html_document
+date: "2025-04-23"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r cars}
+library(data.table)
+library(vars)
+library(xts)
+library(mgcv)
+library(stats)
+library(tseries)
+library(aod)
+library(zoo)
+library(lubridate)
+library(fGarch)
+library(ggpubr)
+library(ggfortify)
+library(quantmod)
+library(urca)
+library(forecast)
+library(mFilter)
+library(TSstudio)
+library(tidyverse)
+library(bruceR)
+```
+
+
+```{r pressure, echo=FALSE}
+##### this chunk of the code below is used to identify and remove extreme points
+# here i checked extreme points in the original data without convert them to time series. 
+data2 = read.csv("VehicleData-1.csv", header = T)
+data2$DATE = as.Date(data2$DATE, format =  "%m/%d/%Y")
+data2 %>% mutate_all(~replace(., is.nan(.), 0))
+```
+
+```{r}
+## identify extreme points in the total sales.
+max.sales = data2[which.max(data2$Total.Sales), ]
+max.sales
+
+min.sales = data2[which.min(data2$Total.Sales), ]
+min.sales
+```
+
+
+```{r}
+## identify extreme points in the new orders
+max.orders = data2[which.max(data2$New.Orders), ]
+max.orders
+
+min.orders = data2[which.min(data2$New.Orders), ]
+min.orders
+```
+
+
+```{r}
+## remove those identified extreme points from total sales and new orders
+
+## remove one max and two min values of tatal sales from dataframe, which is (date) 0001-10-01 and 2020-04-01
+data2 = data2[data2$Total.Sales < 22.055,	]
+data2 = data2[data2$Total.Sales > 11.736, ]
+
+## first to remove two min values of new orders from dataframe, which is (date) 2020-04-01 since it was during Covid. 
+data2 = data2[data2$New.Orders < 64455, ]
+data2 = data2[data2$New.Orders > 24561	,	]
+
+head(data2)
+
+# nrow() to find number of points, length to find how many columns.
+nrow(data2)
+
+```
+
+The code above is to remove three months from 2020, which are March, Apirl and May, those values are either extreme point or very close to be an extreme points. But in general, I feel the values of sales and orders were generally very low in the year 2020, which still caused a trough even I removed three "extreme" points.which can be seen from the plot below. 
+
+
+```{r}
+## now convert the data with extreme values removed 
+new.sales = ts(data2$Total.Sales, start = c(2000,1,1), frequency = 12)
+new.orders = ts(data2$New.Orders, start = c(2000,1,1), frequency = 12)
+```
+
+
+```{r}
+new.sales.plot = autoplot(new.sales) + xlab("date") + ylab("sales") + ggtitle("Total Sales") 
+new.sales.plot
+
+new.orders.plot = autoplot(new.orders) + xlab("data") + ylab("orders") + ggtitle("New Orders")
+new.orders.plot
+```
+
+
+```{r}
+### since the value of Total sales is seasonally adjusted annual rate, I need to translate the value of new orders to seasonally adjusted annual rate too just to match the total sales with same units.
+
+year = format(data2$DATE, "%y")
+new.mean = aggregate(New.Orders~year, data2, mean)
+#new.mean[,1]
+#new.mean[,2]
+newdata = data.frame(year = new.mean[,1], year_mean = new.mean[,2])
+newdata
+
+library(dplyr)
+newdata = newdata%>%mutate(month.mean = year_mean/12)
+newdata
+data2 = data2%>%separate(DATE, c("year", "month", "day"), sep = "-")
+
+split.year = split(data2, data2$year)
+
+data2
+```
+
+```{r}
+zero = data.frame(data2[data2$year == 0, ])
+zero$rate = 0
+for (a in 1:length(zero$New.Orders)){
+  zero$rate[a] = zero$New.Orders[a]/ 3242.389 
+}
+
+one = data.frame(data2[data2$year == 1, ])
+one$rate = 0
+for (a in 1:length(one$New.Orders)){
+  one$rate[a] = one$New.Orders[a]/ 2962.939	
+}
+
+two = data.frame(data2[data2$year == 2, ])
+two$rate = 0
+for (a in 1:length(two$New.Orders)){
+  two$rate[a] = two$New.Orders[a]/ 3267.312		
+}
+
+three = data.frame(data2[data2$year == 3, ])
+three$rate = 0
+for (a in 1:length(three$New.Orders)){
+  three$rate[a] = three$New.Orders[a]/ 3428.694		
+}
+
+four = data.frame(data2[data2$year == 4, ])
+four$rate = 0
+for (a in 1:length(four$New.Orders)){
+  four$rate[a] = four$New.Orders[a]/ 3415.549			
+}
+
+five = data.frame(data2[data2$year == 5, ])
+five$rate = 0
+for (a in 1:length(five$New.Orders)){
+  five$rate[a] = five$New.Orders[a]/ 3492.632				
+}
+
+six = data.frame(data2[data2$year == 6, ])
+six$rate = 0
+for (a in 1:length(six$New.Orders)){
+  six$rate[a] = six$New.Orders[a]/ 3481.326				
+}
+
+seven = data.frame(data2[data2$year == 7, ])
+seven$rate = 0
+for (a in 1:length(seven$New.Orders)){
+  seven$rate[a] = seven$New.Orders[a]/ 3461.674					
+}
+
+eight = data.frame(data2[data2$year == 8, ])
+eight$rate = 0
+for (a in 1:length(eight$New.Orders)){
+  eight$rate[a] = eight$New.Orders[a]/ 2996.361					
+}
+
+nigh = data.frame(data2[data2$year == 9, ])
+nigh$rate = 0
+for (a in 1:length(nigh$New.Orders)){
+  nigh$rate[a] = nigh$New.Orders[a]/ 2122.000					
+}
+
+ten = data.frame(data2[data2$year == 10, ])
+ten$rate = 0
+for (a in 1:length(ten$New.Orders)){
+  ten$rate[a] = ten$New.Orders[a]/ 2890.646						
+}
+
+ele = data.frame(data2[data2$year == 11, ])
+ele$rate = 0
+for (a in 1:length(ele$New.Orders)){
+  ele$rate[a] = ele$New.Orders[a]/ 3116.896						
+} 
+
+twe = data.frame(data2[data2$year == 12, ])
+twe$rate = 0
+for (a in 1:length(twe$New.Orders)){
+  twe$rate[a] = twe$New.Orders[a]/ 3542.403					
+} 
+
+thirteen = data.frame(data2[data2$year == 13, ])
+thirteen$rate = 0
+for (a in 1:length(thirteen$New.Orders)){
+  thirteen$rate[a] = thirteen$New.Orders[a]/ 3791.562					
+} 
+
+fourteen = data.frame(data2[data2$year == 14, ])
+fourteen$rate = 0
+for (a in 1:length(fourteen$New.Orders)){
+  fourteen$rate[a] = fourteen$New.Orders[a]/ 4179.000					
+} 
+
+fif = data.frame(data2[data2$year == 15, ])
+fif$rate = 0
+for (a in 1:length(fif$New.Orders)){
+  fif$rate[a] = fif$New.Orders[a]/ 4457.993					
+} 
+
+sixth = data.frame(data2[data2$year == 16, ])
+sixth$rate = 0
+for (a in 1:length(sixth$New.Orders)){
+  sixth$rate[a] = sixth$New.Orders[a]/ 4449.278						
+} 
+
+sev = data.frame(data2[data2$year == 17, ])
+sev$rate = 0
+for (a in 1:length(sev$New.Orders)){
+  sev$rate[a] = sev$New.Orders[a]/ 4418.833						
+} 
+
+ei = data.frame(data2[data2$year == 18, ])
+ei$rate = 0
+for (a in 1:length(ei$New.Orders)){
+  ei$rate[a] = ei$New.Orders[a]/ 4641.597						
+} 
+
+ni = data.frame(data2[data2$year == 19, ])
+ni$rate = 0
+for (a in 1:length(ni$New.Orders)){
+  ni$rate[a] = ni$New.Orders[a]/ 4545.285							
+} 
+
+tw = data.frame(data2[data2$year == 20, ])
+tw$rate = 0
+for (a in 1:length(tw$New.Orders)){
+  tw$rate[a] = tw$New.Orders[a]/ 4507.417							
+} 
+
+twone = data.frame(data2[data2$year == 21, ])
+twone$rate = 0
+for (a in 1:length(twone$New.Orders)){
+  twone$rate[a] = twone$New.Orders[a]/ 4389.403							
+} 
+
+twtw = data.frame(data2[data2$year == 22, ])
+twtw$rate = 0
+for (a in 1:length(twtw$New.Orders)){
+  twtw$rate[a] = twtw$New.Orders[a]/ 4914.208								
+} 
+
+twth = data.frame(data2[data2$year == 23, ])
+twth$rate = 0
+for (a in 1:length(twth$New.Orders)){
+  twth$rate[a] = twth$New.Orders[a]/ 5134.861								
+} 
+
+twfour = data.frame(data2[data2$year == 24, ])
+twfour$rate = 0
+for (a in 1:length(twfour$New.Orders)){
+  twfour$rate[a] = twfour$New.Orders[a]/ 5238.583								
+} 
+```
+
+
+```{r}
+newbind = rbind(zero,one, three,four,five,six,seven,eight,nigh, ten, ele, thirteen, fourteen, fif, sixth,sev, ei, ni, tw, twone, twtw, twth,twfour)
+
+#newbind = newbind%>%mutate(Date.new = make_date(year, month, day))
+
+newbind = newbind%>%mutate(date = ymd(paste(year, month, day)))
+
+newbind$date = as.Date(newbind$date, format =  "%m/%d/%Y")
+```
+
+
+```{r}
+newbind = data.frame(newbind)
+
+newdata = data.frame(subset(newbind, select = c(date, Total.Sales, rate)))
+
+colnames(newdata) = c("Date", "SAAR.Total.Sales", "SAAR.New.Orders")
+
+head(newdata)
+
+# check number of data points of dataframe, use nrow(), check number of row of one variable using length()
+nrow(newdata)
+length(newdata$SAAR.Total.Sales)
+length(newdata$SAAR.New.Orders)
+
+new.sales.rate = ts(newdata$SAAR.Total.Sales, start = c(2000,1,1), frequency = 12)
+new.orders.rate = ts(newdata$SAAR.New.Orders, start = c(2000,1,1), frequency = 12)
+
+new.sales.rate.plot = autoplot(new.sales.rate) + xlab("Date") + ylab("Total Sales") + ggtitle("Total Sales - Seasonally Adjusted Annual Rate") 
+new.sales.rate.plot
+
+new.orders.rate.plot = autoplot(new.orders.rate) + xlab("Date") + ylab("New Orders") + ggtitle("New Orders - Seasonally Adjusted Annual Rate")
+new.orders.rate.plot
+
+ts_data = ts(newdata[,-1],start=2000,frequency=12)
+autoplot(ts_data,main='SAAR of Total Sales  &  SAAR of New Orders',ylab="SAAR",xlab= 'Date')
+```
+
+
+```{r}
+diff_ts = diff(ts_data)
+head(diff_ts)
+autoplot(diff_ts, main="1st-order Differenced SAAR of Total Sales and New Orders", ylab="1st-order Differenced SAAR", xlab="Date")
+```
+
+```{r}
+ggAcf(diff_ts[, "SAAR.Total.Sales"], lag.max=200, col="brown1", main="Differenced SAAR of Total Sales")
+```
+
+
+```{r}
+ggAcf(diff_ts[, "SAAR.New.Orders"], lag.max=200, col="darkturquoise", main="differenced SAAR of New Orders")
+```
+
+(1) From ACFs, I think it is now white noise since most lags are within 95% confidence band, some of the lags are outside the confidence band, due to the rest 5%.
+(2) Code below I will start using 1st differenced data, since I think it is a white noise after differencing
+
+
+
+### VAR model
+```{r}
+colnames(diff_ts) = c( "New orders", "Total sales")
+
+```
+
+
+```{r}
+# I applied VAR model to the entire time series with 1st order differenced. 
+var.model.order = VARselect(diff_ts, lag.max = 20)
+var.model.order$selection
+```
+
+
+```{r}
+var.aic.model = VAR(diff_ts, p = 8)
+summary(var.aic.model)
+```
+
+```{r}
+var.bic.model = VAR(diff_ts, p = 1)
+summary(var.bic.model)
+```
+
+```{r}
+## checked residual with order 8 choosen by aic 
+plot(ts(residuals(var.aic.model), start = 2000), main = "Residual Processes")
+```
+
+```{r}
+## checked residual with order 8 choosen by bic 
+plot(ts(residuals(var.bic.model), start = 2000), main = "Residual Processes")
+```
+Statistical test below is for aic order selection
+
+```{r}
+serial.test(var.aic.model)
+```
+
+P value is bigger than 0.05, fail to reject null of uncorrelated residuals
+
+
+```{r}
+arch.test(var.aic.model)
+```
+
+P value is close to 0, reject null of constant volatility
+
+
+```{r}
+normality.test(var.aic.model)
+```
+
+P value is close to 0, reject null of normality
+
+
+Statistical test below is for bic order selection, the result is same as the one from aic. Also, no matter what choosen order is, the roots in within unit circle, so the var model appears to be stable. 
+
+
+```{r}
+serial.test(var.bic.model)
+```
+
+
+```{r}
+arch.test(var.bic.model)
+```
+
+
+```{r}
+normality.test(var.bic.model)
+```
+
+
+```{r}
+granger_causality(var.aic.model)
+```
+
+
+```{r}
+granger_causality(var.bic.model)
+```
+
+No matter model order chosed by aic or bic, since all p values are bigger than 0.05, there is no significant causal relationship between the variables. 
+
+
+```{r}
+VARselect(diff_ts,type = "both", lag.max = 10, exogen = diff_ts[, 1])$selection
+```
+
+
+## here I tried varx model on the new orders and total sales same time, but got a singular matrix, could not print out summary of the model. 
+
+```{r}
+# varx model on both time series.
+varx.model = VAR(diff_ts, type = "both", p = 6, exogen = diff_ts[,1])
+#summary(varx.model)
+```
+
+From the result, I think the value of order we can at most choose is 3. 
+
+
+
+
+
+
+
+### ARIMA-GARCH model
+
+```{r}
+total.sales = ts(newdata[, 2], start = c(2000, 1), freq=12)
+new.orders = ts(newdata[, 3], start = c(2000, 1), freq=12)
+datte = as.Date(newdata[ ,1], "%m%d%Y")
+```
+
+```{r}
+par(mfrow = c(2, 1))
+plot(total.sales, main = "Time Series of Total Sales", ylab = "Total Sales")
+plot(new.orders, main = "Time Series of New Orders", ylab = "New Orders")
+
+```
+
+
+```{r}
+par(mfrow = c(2, 1))
+acf(total.sales, main = "ACF of total.sales")
+acf(new.orders, main = "ACF of new.orders")
+```
+
+
+
+```{r}
+diff_sales = diff(total.sales)
+diff_orders = diff(new.orders)
+
+par(mfrow = c(2, 1))
+
+plot(diff_sales, main = "Differenced Time Series of Total Sales", ylab = "diff")
+plot(diff_orders, main = "Differenced Time Series of New Orders", ylab = "diff")
+```
+
+```{r}
+par(mfrow = c(2, 1))
+acf(diff_sales, main = "ACF of Differenced Total sales")
+acf(diff_orders, main = "ACF of Differenced New orders")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
