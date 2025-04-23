@@ -664,8 +664,9 @@ ggAcf(diff_ts[, "SAAR.New.Orders"], lag.max=200, col="darkturquoise", main="diff
 
 
 ```{r}
-
-ts.merge = merge()
+#new.sales.rate = ts(newdata$SAAR.Total.Sales, start = c(2000,1,1), frequency = 12)
+#new.orders.rate = ts(newdata$SAAR.New.Orders, start = c(2000,1,1), frequency = 12)
+#ts.merge = merge(xts(new.sales.rate, datte), xts(new.orders.rate, datte), join="inner")
 colnames(diff_ts) = c( "New orders", "Total sales")
 ```
 
