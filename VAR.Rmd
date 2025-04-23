@@ -437,6 +437,16 @@ From the result, I think the value of order we can at most choose is 3.
 
 
 
+
+
+
+
+
+
+
+
+
+
 ### ARIMA-GARCH model
 
 ###(1) First arima garch model is for total sales. 
@@ -501,36 +511,46 @@ orders.test=new.orders[((length(new.orders))-nfore):(length(new.orders))]
 
 ```
 
+
 ```{r}
-allorders.sales = function(ts_data, max_p, max_d, max_q){
-  orders = data.frame()
-  for (p in 0:max_p){
-    for (d in 0:max_d){
-      for (q in 0:max_q) {
-        possibleError = tryCatch({
-          mod = arima(ts_data, order=c(p,d,q), method="ML")
-          current.bic = BIC(mod)
-          orders=-rbind(orders,c(p,d,q,current.bic))
-        },
-          error=function(e) e
-        )
-        if(inherits(possibleError, "error")) next
-        
-      }
+test_modelA = function(p,d,q,data){
+  mod = arima(data, order=c(p,d,q),method="ML")
+  current.aic = AIC(mod)
+  df = data.frame(p,d,q,current.aic)
+  names(df) = c("p","d","q","AIC")
+  #print(paste(p,d,q,current.aic,sep=" "))
+  return(df)
+}
+
+orders = data.frame(Inf,Inf,Inf,Inf)
+names(orders) = c("p","d","q","AIC")
+
+#Orders for DAL
+for (p in 0:5){
+  for (d in 0:2){
+    for (q in 0:5) {
+      possibleError = tryCatch(
+        orders<-rbind(orders,test_modelA(p,d,q,diff(sales.train))),
+        error=function(e) e
+      )
+      if(inherits(possibleError, "error")) next
+      
     }
   }
-  names(orders) = c("p","d","q","BIC")
-  return(orders[order(orders$BIC),])
 }
-head(allorders.sales(sales.train,8,1,8), 5)
+orders = orders[order(-orders$AIC),]
+tail(orders,5)
 ```
+
+
+
 
 
 ```{r}
 
 final.bic = Inf
 final.order.sale = c(0,0)
-for (p in 0:2) for (q in 0:2) {
+for (p in 0:5) for (q in 0:5) {
     spec = ugarchspec(variance.model=list(garchOrder=c(p,q)),
                       mean.model=list(armaOrder=c(0,1), include.mean=T),
                       distribution.model="std")
@@ -556,6 +576,7 @@ final.order.sale
 
 ###  the code above is apply to 1st differenced order of total sales
 #### suggested garch order is (0, 0), which will cause an error : degree of freedom needs to be a positive number, so here, i gave an garch order(0,1) which is same as suggest arima order. 
+
 ```{r}
 #final model for total sales
 sales.spec = ugarchspec(variance.model=list(garchOrder=c(0,1)), mean.model=list(armaOrder=c(0,1), include.mean=T), distribution.model="std")
@@ -563,32 +584,33 @@ sales.model = ugarchfit(sales.spec, diff(sales.train), solver = 'hybrid')
 sales.model
 ```
 
+
 ```{r}
 residuals = residuals(sales.model)
 squared_residuals = residuals^2
 
-plot(residuals, main="Residuals", type="l")
+plot(residuals, main="Residuals of Total sales", type="l")
 ```
 
 ```{r}
-plot(squared_residuals, main="Squared Residuals", type="l")
+plot(squared_residuals, main="Squared Residuals of Total sales", type="l")
 ```
 
 ```{r}
 # Autocorrelation: Check for autocorrelation in residuals using ACF
-acf(residuals, main="ACF of Residuals")
+acf(residuals, main="ACF of Residuals of Total sales")
 ```
 
 ```{r}
-acf(squared_residuals, main="ACF of Residuals")
+acf(squared_residuals, main="ACF of Residuals of Total sales")
 ```
 
 ```{r}
-pacf(residuals, main="PACF of Residuals")
+pacf(residuals, main="PACF of Residuals of Total sales")
 ```
 
 ```{r}
-pacf(squared_residuals, main="PACF of Residuals")
+pacf(squared_residuals, main="PACF of Residuals of Total sales")
 ```
 
 ```{r}
@@ -607,38 +629,80 @@ print(jarque_bera)
 ```
 
 ```{r}
-allorders.order = function(ts_data, max_p, max_d, max_q){
-  orders = data.frame()
-  for (p in 0:max_p){
-    for (d in 0:max_d){
-      for (q in 0:max_q) {
-        possibleError = tryCatch({
-          mod = arima(ts_data, order=c(p,d,q), method="ML")
-          current.bic = BIC(mod)
-          orders=rbind(orders,c(p,d,q,current.bic))
-        },
-          error=function(e) e
-        )
-        if(inherits(possibleError, "error")) next
+# This part is based on BIC on new orders
+#allorders.order = function(ts_data, max_p, max_d, max_q){
+#  orders = data.frame()
+ # for (p in 0:max_p){
+ #   for (d in 0:max_d){
+ #     for (q in 0:max_q) {
+ #       possibleError = tryCatch({
+ #         mod = arima(ts_data, order=c(p,d,q), method="ML")
+  #        current.bic = BIC(mod)
+  #        orders=rbind(orders,c(p,d,q,current.bic))
+  #      },
+  #        error=function(e) e
+   #     )
+   #     if(inherits(possibleError, "error")) next
         
-      }
-    }
-  }
-  names(orders) = c("p","d","q","BIC")
-  return(orders[order(orders$BIC),])
-}
-head(allorders.order(orders.train,8,1,8), 5)
+   #   }
+   # }
+  #}
+  #names(orders) = c("p","d","q","BIC")
+  #return(orders[order(orders$BIC),])
+#}
+#head(allorders.order(orders.train,8,1,8), 5)
 
 
 ```
 
 
+
+
+## this part is arima garch model on new orders
+
+```{r}
+ 
+test_modelB = function(p,d,q,data){
+  mod = arima(data, order=c(p,d,q),method="ML")
+  current.aic = AIC(mod)
+  df = data.frame(p,d,q,current.aic)
+  names(df) = c("p","d","q","AIC")
+  #print(paste(p,d,q,current.aic,sep=" "))
+  return(df)
+}
+
+orders = data.frame(Inf,Inf,Inf,Inf)
+names(orders) = c("p","d","q","AIC")
+
+#Orders for DAL
+for (p in 0:5){
+  for (d in 0:2){
+    for (q in 0:5) {
+      possibleError = tryCatch(
+        orders<-rbind(orders,test_modelB(p,d,q,diff(orders.train))),
+        error=function(e) e
+      )
+      if(inherits(possibleError, "error")) next
+      
+    }
+  }
+}
+orders = orders[order(-orders$AIC),]
+tail(orders,5)
+
+```
+
+
+
+
+### suggested arma order is (5,3), I would choose (4,3) since both aic values are close, 
+
 ```{r}
 final.bic = Inf
 final.order.order = c(0,0)
-for (p in 0:2) for (q in 0:2) {
+for (p in 0:5) for (q in 0:5) {
     spec = ugarchspec(variance.model=list(garchOrder=c(p,q)),
-                      mean.model=list(armaOrder=c(2,2), include.mean=T),
+                      mean.model=list(armaOrder=c(3,4), include.mean=T),
                       distribution.model="std")
     fit = tryCatch({
         ugarchfit(spec, diff(orders.train), solver = 'hybrid')
@@ -657,12 +721,70 @@ for (p in 0:2) for (q in 0:2) {
 }
 final.order.order
 ```
-
-## The code above gave the error when i gave arima order (2,2), but if i changed order to (2,1), then error messege disappeared. the code above is apply to 1st differenced order of new orders. 
+##### i will work on the solution to this error. 
 
 ```{r}
-
+#final model for S2
+order.spec = ugarchspec(variance.model=list(garchOrder=c(4,3)), mean.model=list(armaOrder=c(0,0), include.mean=T), distribution.model="std")
+order.model = ugarchfit(order.spec, diff(orders.train), solver = 'hybrid')
+order.model
 ```
+
+```{r}
+residuals.order = residuals(order.model)
+squared_residuals.order = residuals.order^2
+
+plot(residuals.order, main="Residuals of New orders", type="l")
+```
+```{r}
+plot(squared_residuals.order, main="Squared Residuals of New orders", type="l")
+```
+
+```{r}
+# Autocorrelation: Check for autocorrelation in residuals using ACF
+acf(residuals.order, main="ACF of Residuals of New order")
+acf(squared_residuals.order, main="ACF of Residuals of New order")
+```
+
+
+```{r}
+pacf(residuals.order, main="PACF of Residuals of New orders")
+pacf(squared_residuals.order, main="PACF of Residuals of New orders")
+```
+
+```{r}
+# Ljung-Box test to check for autocorrelation
+Box.test(residuals.order, lag = 4, type = "Ljung-Box")
+```
+
+```{r}
+Box.test(squared_residuals.order, lag = 4, type = "Ljung-Box")
+```
+
+```{r}
+# Alternatively, use Jarque-Bera test for normality
+jarque_bera = jarque.bera.test(residuals.order)
+print(jarque_bera)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
