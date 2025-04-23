@@ -665,6 +665,8 @@ ggAcf(diff_ts[, "SAAR.New.Orders"], lag.max=200, col="darkturquoise", main="diff
 
 ```{r}
 
+ts.merge = merge()
+colnames(diff_ts) = c( "New orders", "Total sales")
 ```
 
 
@@ -689,69 +691,84 @@ summary(var.bic.model)
 
 
 ```{r}
+## checked residual with order 8 choosen by aic 
 plot(ts(residuals(var.aic.model), start = 2000), main = "Residual Processes")
 ```
 
 
 
 ```{r}
-
+## checked residual with order 8 choosen by bic 
+plot(ts(residuals(var.bic.model), start = 2000), main = "Residual Processes")
 ```
 
+Statistical test below is for aic order selection
+
+```{r}
+serial.test(var.aic.model)
+```
+P value is bigger than 0.05, fail to reject null of uncorrelated residuals
 
 
 ```{r}
-
+arch.test(var.aic.model)
 ```
 
+P value is close to 0, reject null of constant volatility
 
 
 ```{r}
-
+normality.test(var.aic.model)
 ```
 
+P value is close to 0, reject null of normality
+
+
+Statistical test below is for bic order selection, the result is same as the one from aic. Also, no matter what choosen order is, the roots in within unit circle, so the var model appears to be stable. 
 
 
 ```{r}
-
-```
-
-
-
-```{r}
-
-```
-
-
-```{r}
-
-
-```
-
-
-```{r}
-
+serial.test(var.bic.model)
 ```
 
 
 ```{r}
-
+arch.test(var.bic.model)
 ```
 
 
 ```{r}
-
+normality.test(var.bic.model)
 ```
 
 
 ```{r}
-
+granger_causality(var.aic.model)
 ```
 
 
 ```{r}
-
+granger_causality(var.bic.model)
 ```
+
+No matter model order chosed by aic or bic, since all p values are bigger than 0.05, there is no significant causal relationship between the variables. 
+
+
+
+```{r}
+VARselect(diff_ts,type = "both", lag.max = 10, exogen = diff_ts[, 1])$selection
+```
+
+
+## here I tried varx model on the new orders and total sales same time, but got a singular matrix, could not print out summary of the model. 
+
+```{r}
+# varx model on both time series.
+varx.model = VAR(diff_ts, type = "both", p = 6, exogen = diff_ts[,1])
+#summary(varx.model)
+```
+
+From the result, I think the value of order we can at most choose is 3. 
 
 
 ```{r}
