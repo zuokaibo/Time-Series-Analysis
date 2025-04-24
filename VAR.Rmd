@@ -33,6 +33,7 @@ library(rugarch)
 ```
 
 
+
 ```{r pressure, echo=FALSE}
 ##### this chunk of the code below is used to identify and remove extreme points
 # here i checked extreme points in the original data without convert them to time series. 
@@ -40,6 +41,8 @@ data2 = read.csv("VehicleData-1.csv", header = T)
 data2$DATE = as.Date(data2$DATE, format =  "%m/%d/%Y")
 data2 %>% mutate_all(~replace(., is.nan(.), 0))
 ```
+
+
 
 ```{r}
 ## identify extreme points in the total sales.
@@ -51,6 +54,7 @@ min.sales
 ```
 
 
+
 ```{r}
 ## identify extreme points in the new orders
 max.orders = data2[which.max(data2$New.Orders), ]
@@ -59,6 +63,7 @@ max.orders
 min.orders = data2[which.min(data2$New.Orders), ]
 min.orders
 ```
+
 
 
 ```{r}
@@ -82,11 +87,13 @@ nrow(data2)
 The code above is to remove three months from 2020, which are March, Apirl and May, those values are either extreme point or very close to be an extreme points. But in general, I feel the values of sales and orders were generally very low in the year 2020, which still caused a trough even I removed three "extreme" points.which can be seen from the plot below. 
 
 
+
 ```{r}
 ## now convert the data with extreme values removed 
 new.sales = ts(data2$Total.Sales, start = c(2000,1,1), frequency = 12)
 new.orders = ts(data2$New.Orders, start = c(2000,1,1), frequency = 12)
 ```
+
 
 
 ```{r}
@@ -96,6 +103,7 @@ new.sales.plot
 new.orders.plot = autoplot(new.orders) + xlab("data") + ylab("orders") + ggtitle("New Orders")
 new.orders.plot
 ```
+
 
 
 ```{r}
@@ -118,6 +126,8 @@ split.year = split(data2, data2$year)
 
 data2
 ```
+
+
 
 ```{r}
 zero = data.frame(data2[data2$year == 0, ])
@@ -272,6 +282,7 @@ for (a in 1:length(twfour$New.Orders)){
 ```
 
 
+
 ```{r}
 newbind = rbind(zero,one, three,four,five,six,seven,eight,nigh, ten, ele, thirteen, fourteen, fif, sixth,sev, ei, ni, tw, twone, twtw, twth,twfour)
 
@@ -281,6 +292,7 @@ newbind = newbind%>%mutate(date = ymd(paste(year, month, day)))
 
 newbind$date = as.Date(newbind$date, format =  "%m/%d/%Y")
 ```
+
 
 
 ```{r}
@@ -432,9 +444,90 @@ No matter model order chosed by aic or bic, since all p values are bigger than 0
 
 
 
+#### forecast of VAR model on both variables : plot
+```{r}
+head(diff_ts)
+
+var.aic.model.forecast = predict(var.aic.model, n.ahead =10)
+
+order.var.aic.pred = var.aic.model.forecast$fcst$New.orders
+sales.var.aic.pred = var.aic.model.forecast$fcst$Total.sales
+
+finalpreds=function(fcst,ts){
+  var.pred=rep(0,10)
+  var.pred[1]=ts[length(ts)]+fcst[1]
+  for (i in 2:10){
+    var.pred[i]<-var.pred[i-1]+fcst[i]
+  }
+  return(var.pred)
+}
+
+n = nrow(diff_ts)
+
+par(mfrow=c(2,1))
+
+plot(diff_ts[(n-30):n],type="l",ylab="SAAR",xlab="Date",main="Total Sales Predictions")
+points(ts(sales.var.aic.pred,start=22),lwd=2,col="red")
+
+plot(diff_ts[(n-30):n],type="l",ylab="SAAR",xlab="Date",main="New Orders Predictions")
+points(ts(order.var.aic.pred,start=22),lwd=2,col="blue")
+
+```
 
 
-#### code below is for VARX model
+```{r}
+var.bic.model.forecast = predict(var.bic.model, n.ahead = 10)
+
+order.var.bic.pred = var.bic.model.forecast$fcst$New.orders
+sales.var.bic.pred = var.bic.model.forecast$fcst$Total.sales
+
+finalpreds=function(fcst,ts){
+  var.pred=rep(0,10)
+  var.pred[1]=ts[length(ts)]+fcst[1]
+  for (i in 2:10){
+    var.pred[i]<-var.pred[i-1]+fcst[i]
+  }
+  return(var.pred)
+}
+
+
+par(mfrow=c(2,1))
+
+plot(diff_ts[(n-30):n],type="l",ylab="SAAR",xlab="Date",main="Total Sales Predictions")
+points(ts(sales.var.bic.pred,start=22),lwd=2,col="red")
+
+plot(diff_ts[(n-30):n],type="l",ylab="SAAR",xlab="Date",main="New Orders Predictions")
+points(ts(order.var.bic.pred,start=22),lwd=2,col="blue")
+
+
+```
+
+
+
+#### From the plots above , which are build based on AIC and BIC criterion, since AIC and BIC gave different orders, AIC suggests order 8, BIC suggests order 1. Since the plot shows very little difference on predictions, I would only use the model that built with BIC order 1 to do MAPE and PM.  
+#### Forecast of VAR model on both variables : MAPE and PM
+```{r}
+
+sales.test=diff_ts[207:247,2]
+orders.test = diff_ts[207:247,1]
+
+sales.train=diff_ts[1:206,2]
+orders.train = diff_ts[1:206:247,1]
+
+sales.var.pred = finalpreds(sales.var.bic.pred,  sales.train)
+orders.var.pred = finalpreds(sales.var.bic.pred, orders.train)
+
+cat("\n\nTotal Sales VAR MAPE:",abs(mean(abs(sales.var.pred-sales.test)/sales.test)),"\nTotal Sales VAR PM:",
+sum((sales.var.pred-sales.test)^2)/sum((sales.test-mean(sales.test))^2),
+"\nNew Orders MAPE:",abs(mean(abs(orders.var.pred-orders.test)/orders.test)),"\nNew Orders PM:",
+sum((orders.var.pred-orders.test)^2)/sum((orders.test-mean(orders.test))^2))
+```
+
+
+
+
+
+#### Code below is for VARX model
 ```{r}
 
 total.sales = ts(newdata[, 2], start = c(2000, 1), freq=12)
@@ -624,7 +717,7 @@ final.order.sale
 
 ```{r}
 #final model for total sales
-sales.spec = ugarchspec(variance.model=list(garchOrder=c(0,1)), mean.model=list(armaOrder=c(0,1), include.mean=T), distribution.model="std")
+sales.spec = ugarchspec(variance.model=list(model = "eGARCH", submodel = "EGARCH",garchOrder=c(0,1)), mean.model=list(armaOrder=c(0,1), include.mean=T), distribution.model="std")
 sales.model = ugarchfit(sales.spec, diff(sales.train), solver = 'hybrid')
 sales.model
 ```
@@ -769,7 +862,7 @@ final.order.order
 
 ```{r}
 #final model for S2
-order.spec = ugarchspec(variance.model=list(model = "eGARCH",garchOrder=c(4,3)), mean.model=list(armaOrder=c(0,0), include.mean=T), distribution.model="std")
+order.spec = ugarchspec(variance.model=list(model = "eGARCH", submodel = "EGARCH",garchOrder=c(4,3)), mean.model=list(armaOrder=c(0,0), include.mean=T), distribution.model="std")
 order.model = ugarchfit(order.spec, diff(orders.train), solver = 'hybrid')
 order.model
 ```
@@ -812,6 +905,12 @@ print(jarque_bera)
 ```
 
 
+```{r}
+nfore=9
+
+pred.test_var <- as.vector(predict(var.aic.model,n.ahead=9))
+s2.pred_var=pred.test_var$fcst$total.sales[,1]+total.sales.test[1:nfore]
+```
 
 
 
