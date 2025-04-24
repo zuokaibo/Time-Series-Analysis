@@ -111,6 +111,7 @@ newdata
 library(dplyr)
 newdata = newdata%>%mutate(month.mean = year_mean/12)
 newdata
+
 data2 = data2%>%separate(DATE, c("year", "month", "day"), sep = "-")
 
 split.year = split(data2, data2$year)
@@ -353,6 +354,10 @@ summary(var.aic.model)
 var.bic.model = VAR(diff_ts, p = 1)
 summary(var.bic.model)
 ```
+result generated from code above suggests order 8 based on aic and order 1 based on bic. according to aic criterion, coefficient of Total.sales.l8 is statistically significant at level 0.05; according to bic criterion, coefficients of both total.sales.l1 and new.orders.l1 are statistically significant at level 0.05. 
+
+
+
 
 ```{r}
 ## checked residual with order 8 choosen by aic 
@@ -363,7 +368,14 @@ plot(ts(residuals(var.aic.model), start = 2000), main = "Residual Processes")
 ## checked residual with order 8 choosen by bic 
 plot(ts(residuals(var.bic.model), start = 2000), main = "Residual Processes")
 ```
-Statistical test below is for aic order selection
+
+(bic order selection) From plots of residual and squared residual, both implied a white noise. 
+
+
+
+
+
+##### code below is for statistical test on models with aic and with bic.
 
 ```{r}
 serial.test(var.aic.model)
@@ -386,7 +398,7 @@ normality.test(var.aic.model)
 P value is close to 0, reject null of normality
 
 
-Statistical test below is for bic order selection, the result is same as the one from aic. Also, no matter what choosen order is, the roots in within unit circle, so the var model appears to be stable. 
+Statistical test below is for bic order selection, the result is same as the one from aic. Also, no matter what chosen order is, the roots are in unit circle, so the var model appears to be stable. 
 
 
 ```{r}
@@ -416,22 +428,55 @@ granger_causality(var.bic.model)
 No matter model order chosed by aic or bic, since all p values are bigger than 0.05, there is no significant causal relationship between the variables. 
 
 
+
+
+
+
+
+
+#### code below is for VARX model
 ```{r}
-VARselect(diff_ts,type = "both", lag.max = 10, exogen = diff_ts[, 1])$selection
+
+total.sales = ts(newdata[, 2], start = c(2000, 1), freq=12)
+new.orders = ts(newdata[, 3], start = c(2000, 1), freq=12)
+datte = as.Date(newdata[ ,1], "%m%d%Y")
+
+ts.merge = merge(xts(total.sales, datte), xts(new.orders, datte), join = "inner")
+
+colnames(ts.merge) = c("total.sales", "new.orders")
+n = dim(ts.merge)[1]
+
+head(ts.merge)
+
+diff_data = diff(ts.merge)[-1]
+
+train_data_varx = head(diff_data, -9)
+test_data_varx = tail(diff_data, 9)
+
+VARselect(train_data_varx[,-1],type = "both", lag.max = 9, exogen = train_data_varx[,1])$selection
+
 ```
 
 
-## here I tried varx model on the new orders and total sales same time, but got a singular matrix, could not print out summary of the model. 
-
 ```{r}
-# varx model on both time series.
-varx.model = VAR(diff_ts, type = "both", p = 6, exogen = diff_ts[,1])
+varx.model = VAR(train_data_varx, type = "both", p = 7, exogen = train_data_varx[, 1] )
 #summary(varx.model)
+varx.model
 ```
 
-From the result, I think the value of order we can at most choose is 3. 
+
+```{r}
+VARselect(train_data_varx[,-2],type = "both", lag.max = 9, exogen = train_data_varx[,2])$selection
+```
+
+```{r}
+varx.model = VAR(train_data_varx, type = "both", p = 2, exogen = train_data_varx[, 2] )
+#summary(varx.model)
+varx.model
+```
 
 
+#### I have tried VARX model with both being exogenous separately in difference varx model order selectionand VAR() with each being exoge one time, but when i tried to display the model, summary() failed, as it said the matrix is singular. so instead, i only display model without summary(), then I only coefficient of the model with each being exogenous variable one time. when new orders being exogenous variable, I got all coefficient 0 for equation new orders. I am not sure what conclusion we can have from this, does it mean new orders is exogenous variable and determined outside the model? 
 
 
 
@@ -694,7 +739,6 @@ tail(orders,5)
 
 
 
-
 ### suggested arma order is (5,3), I would choose (4,3) since both aic values are close, 
 
 ```{r}
@@ -725,7 +769,7 @@ final.order.order
 
 ```{r}
 #final model for S2
-order.spec = ugarchspec(variance.model=list(garchOrder=c(4,3)), mean.model=list(armaOrder=c(0,0), include.mean=T), distribution.model="std")
+order.spec = ugarchspec(variance.model=list(model = "eGARCH",garchOrder=c(4,3)), mean.model=list(armaOrder=c(0,0), include.mean=T), distribution.model="std")
 order.model = ugarchfit(order.spec, diff(orders.train), solver = 'hybrid')
 order.model
 ```
