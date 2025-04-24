@@ -124,7 +124,6 @@ data2 = data2%>%separate(DATE, c("year", "month", "day"), sep = "-")
 
 split.year = split(data2, data2$year)
 
-data2
 ```
 
 
@@ -387,7 +386,7 @@ plot(ts(residuals(var.bic.model), start = 2000), main = "Residual Processes")
 
 
 
-##### code below is for statistical test on models with aic and with bic.
+##### code below is for statistical test on models with aic and with bic. aic comes first. 
 
 ```{r}
 serial.test(var.aic.model)
@@ -416,16 +415,22 @@ Statistical test below is for bic order selection, the result is same as the one
 ```{r}
 serial.test(var.bic.model)
 ```
+P value is smaller than 0.05, reject null of uncorrelated residuals, this result is opposite of the result from aic.
+
 
 
 ```{r}
 arch.test(var.bic.model)
 ```
+P value is close to 0, reject null of constant volatility
 
 
 ```{r}
 normality.test(var.bic.model)
 ```
+P value is close to 0, reject null of normality
+
+
 
 
 ```{r}
@@ -650,6 +655,8 @@ orders.test=new.orders[((length(new.orders))-nfore):(length(new.orders))]
 ```
 
 
+
+### First is arima model on total sales, arima garch on total sales positioned below the arima model, all with 1st differencing order.
 ```{r}
 test_modelA = function(p,d,q,data){
   mod = arima(data, order=c(p,d,q),method="ML")
@@ -681,11 +688,7 @@ tail(orders,5)
 ```
 
 
-
-
-
 ```{r}
-
 final.bic = Inf
 final.order.sale = c(0,0)
 for (p in 0:5) for (q in 0:5) {
@@ -708,11 +711,100 @@ for (p in 0:5) for (q in 0:5) {
     }
 }
 final.order.sale
+```
+
+
+```{r}
+arima.sale.model = arima(diff(sales.train), order = c(0,0,1), method = "ML")
+```
+
+```{r}
+par(mfrow=c(2,2))
+
+acf(resid(arima.sale.model), 
+    main = "ACF of Residuals (Total Sales)", 
+    cex.main = 0.7)
+
+pacf(resid(arima.sale.model),
+    main = "PACF of Residuals (Total Sales)", 
+    cex.main = 0.7)
+
+
+acf(resid(arima.sale.model)^2, 
+    main = "ACF of Squared Residuals (Total Sales)", 
+    cex.main = 0.7)
+
+pacf(resid(arima.sale.model)^2, 
+    main = "PACF of Squared Residuals (Total Sales)", 
+    cex.main = 0.7)
+```
+
+
+```{r}
+Box.test(arima.sale.model$residuals, lag = (0+1+1), 
+         type="Ljung-Box", fitdf = (0+1))
+```
+P value is much smaller than 0.05, reject null of independently distributed
+
+
+
+```{r}
+Box.test(arima.sale.model$residuals^2, lag = (0+1+1), 
+         type="Ljung-Box", fitdf = (0+1))
+```
+P value is smaller than 0.05, reject null of independently distributed
+
+
+```{r}
+train_sales = total.sales[1:(length(total.sales)-5)]
+test_sales = total.sales[(length(total.sales)-4):length(total.sales)]
+
+n = length(total.sales)
+n_fit=length(train_sales)
+n_forward=n-n_fit
+w_n=length(train_sales)
+
+outpred_sales= predict(arima.sale.model,n.ahead=n_forward)
+
+# 95% confidence interval
+ubound_sales = outpred_sales$pred+1.96*outpred_sales$se
+lbound_sales = outpred_sales$pred-1.96*outpred_sales$se
+ymin = min(lbound_sales)-100
+ymax = max(ubound_sales)+100
+
+dates.diff = newdata$Date
+
+par(mfrow=c(1,1))
+
+plot((dates.diff)[(n-n_forward-20):n],total.sales[(n-n_forward-20):n], main = "Forecast on Total Sales", type="l",
+     ylim=c(ymin,ymax), xlab="Date", ylab="SAAR of Total Sales")
+points((dates.diff)[(n_fit+1):n],outpred_sales$pred,col="red")
+lines((dates.diff)[(n_fit+1):n],ubound_sales,lty=3,lwd= 2, col="blue")
+lines((dates.diff)[(n_fit+1):n],lbound_sales,lty=3,lwd= 2, col="blue")
+#legend('topleft', legend=c("1 month ahead ","Upper-Lower bound"), lty = 2, col=c("red","blue"))
 
 ```
 
 
-###  the code above is apply to 1st differenced order of total sales
+```{r}
+n_w = length(total.sales)
+val_true_sales = as.vector(total.sales[(n_fit+1):n_w])
+val_pred_sales = outpred_sales$pred
+```
+
+
+```{r}
+#cat("\n\nTotal Sales ARIMA MAPE:",abs(mean(abs(val_pred_sales-val_true_sales)/val_true_sales)),"\nTotal Sales ARIMA PM:",
+#sum((val_pred_sales-val_true_sales)^2)/sum((val_true_sales)^2),
+#"\nNew Orders MAPE:",abs(mean(abs(orders.var.pred-orders.test)/orders.test)),"\nNew Orders PM:",
+#sum((orders.var.pred-orders.test)^2)/sum((orders.test-mean(orders.test))^2))
+```
+
+
+###  the code above is applied to 1st differenced order of total sales
+
+
+
 #### suggested garch order is (0, 0), which will cause an error : degree of freedom needs to be a positive number, so here, i gave an garch order(0,1) which is same as suggest arima order. 
 
 ```{r}
@@ -755,48 +847,38 @@ pacf(squared_residuals, main="PACF of Residuals of Total sales")
 # Ljung-Box test to check for autocorrelation
 Box.test(residuals, lag = 4, type = "Ljung-Box")
 ```
+p value is bigger than 0.05, fail to reject null of independently distributed
+
+
+
 
 ```{r}
 Box.test(squared_residuals, lag = 4, type = "Ljung-Box")
 ```
+p value is smaller than 0.05, reject null of independently distributed
+
+
+
 
 ```{r}
 # Alternatively, use Jarque-Bera test for normality
 jarque_bera = jarque.bera.test(residuals)
 print(jarque_bera)
 ```
-
-```{r}
-# This part is based on BIC on new orders
-#allorders.order = function(ts_data, max_p, max_d, max_q){
-#  orders = data.frame()
- # for (p in 0:max_p){
- #   for (d in 0:max_d){
- #     for (q in 0:max_q) {
- #       possibleError = tryCatch({
- #         mod = arima(ts_data, order=c(p,d,q), method="ML")
-  #        current.bic = BIC(mod)
-  #        orders=rbind(orders,c(p,d,q,current.bic))
-  #      },
-  #        error=function(e) e
-   #     )
-   #     if(inherits(possibleError, "error")) next
-        
-   #   }
-   # }
-  #}
-  #names(orders) = c("p","d","q","BIC")
-  #return(orders[order(orders$BIC),])
-#}
-#head(allorders.order(orders.train,8,1,8), 5)
-
-
-```
+P value is smaller than 0.05, reject null of data being normally distributed
 
 
 
 
-## this part is arima garch model on new orders
+
+
+
+
+
+
+
+
+## This part is arima model on new orders. arima garch model positioned below arima model. 
 
 ```{r}
  
@@ -832,14 +914,14 @@ tail(orders,5)
 
 
 
-### suggested arma order is (5,3), I would choose (4,3) since both aic values are close, 
+### suggested arma order is (0,2) 
 
 ```{r}
 final.bic = Inf
 final.order.order = c(0,0)
 for (p in 0:5) for (q in 0:5) {
     spec = ugarchspec(variance.model=list(garchOrder=c(p,q)),
-                      mean.model=list(armaOrder=c(3,4), include.mean=T),
+                      mean.model=list(armaOrder=c(0,2), include.mean=T),
                       distribution.model="std")
     fit = tryCatch({
         ugarchfit(spec, diff(orders.train), solver = 'hybrid')
@@ -858,24 +940,126 @@ for (p in 0:5) for (q in 0:5) {
 }
 final.order.order
 ```
-##### i will work on the solution to this error. 
+
+
+#### (arima garch order selection on differenced New orders)From order selection, based on AIC criterion, the selected order for arima-garch is (0,2) x (0,0), i will fit an arima model 
 
 ```{r}
-#final model for S2
-order.spec = ugarchspec(variance.model=list(model = "eGARCH", submodel = "EGARCH",garchOrder=c(4,3)), mean.model=list(armaOrder=c(0,0), include.mean=T), distribution.model="std")
+
+arima.order.model = arima(orders.train, order = c(0,1,2), method = "ML")
+```
+
+```{r}
+par(mfrow=c(2,2))
+
+acf(resid(arima.order.model), 
+    main = "ACF of Residuals (New Orders)", 
+    cex.main = 0.7)
+
+pacf(resid(arima.order.model),
+    main = "PACF of Residuals (New Orders)", 
+    cex.main = 0.7)
+
+
+acf(resid(arima.order.model)^2, 
+    main = "ACF of Squared Residuals (New Orders)", 
+    cex.main = 0.7)
+
+pacf(resid(arima.order.model)^2, 
+    main = "PACF of Squared Residuals (New Orders)", 
+    cex.main = 0.7)
+```
+
+```{r}
+Box.test(arima.order.model$residuals, lag = (0+2+1), 
+         type="Ljung-Box", fitdf = (0+2))
+```
+P value is bigger than 0.05,  fail to reject the null of independently distributed
+
+
+```{r}
+Box.test(arima.order.model$residuals^2, lag = (0+2+1), 
+         type="Ljung-Box", fitdf = (0+2))
+```
+
+P value is smaller than 0.05,  reject the null of independently distributed
+
+
+
+
+
+```{r}
+
+train_orders = new.orders[1:(length(new.orders)-5)]
+test_orders = new.orders[(length(new.orders)-4):length(new.orders)]
+
+n = length(new.orders)
+n_fit=length(train_orders)
+n_forward=n-n_fit
+w_n=length(train_orders)
+
+outpred_orders= predict(arima.order.model,n.ahead=n_forward)
+
+# 95% confidence interval
+ubound = outpred_orders$pred+1.96*outpred_orders$se
+lbound = outpred_orders$pred-1.96*outpred_orders$se
+ymin = min(lbound)-100
+ymax = max(ubound)+100
+
+dates.diff = newdata$Date
+
+par(mfrow=c(1,1))
+
+n = length(new.orders)
+
+plot((dates.diff)[(n-n_forward-20):n],new.orders[(n-n_forward-20):n], main = "Forecast on New Orders", type="l",
+     ylim=c(ymin,ymax), xlab="Date", ylab="SAAR of New Ordes")
+points((dates.diff)[(n_fit+1):n],outpred_orders$pred,col="red")
+lines((dates.diff)[(n_fit+1):n],ubound,lty=3,lwd= 2, col="blue")
+lines((dates.diff)[(n_fit+1):n],lbound,lty=3,lwd= 2, col="blue")
+#legend('topleft', legend=c("9 month ahead ","Upper-Lower bound"), lty = 2, col=c("red","blue"))
+```
+
+
+```{r}
+n_w = length(new.orders)
+val_true_orders = as.vector(new.orders[(n_fit+1):n_w])
+val_pred_orders = outpred_orders$pred
+```
+
+
+```{r}
+cat("\n\nTotal Sales ARIMA MAPE:",abs(mean(abs(val_pred_sales-val_true_sales)/val_true_sales)),"\nTotal Sales ARIMA PM:",
+sum((val_pred_sales-val_true_sales)^2)/sum((val_true_sales)^2),
+"\nNew Orders ARIMA MAPE:",abs(mean(abs(val_pred_orders-val_true_orders)/val_true_orders)),"\nNew Orders ARIMA PM:",
+sum((val_pred_orders-val_true_orders)^2)/sum((val_true_orders)^2))
+```
+
+
+
+
+
+
+
+
+###### Down below is the arima garch model with garch order (0,0) (1st differnced order on New orders)
+```{r}
+#final model for orders
+order.spec = ugarchspec(variance.model=list(model = "eGARCH", submodel = "EGARCH",garchOrder=c(0,1)), mean.model=list(armaOrder=c(0,2), include.mean=T), distribution.model="std")
 order.model = ugarchfit(order.spec, diff(orders.train), solver = 'hybrid')
 order.model
 ```
+
 
 ```{r}
 residuals.order = residuals(order.model)
 squared_residuals.order = residuals.order^2
 
 plot(residuals.order, main="Residuals of New orders", type="l")
-```
-```{r}
+
 plot(squared_residuals.order, main="Squared Residuals of New orders", type="l")
 ```
+
 
 ```{r}
 # Autocorrelation: Check for autocorrelation in residuals using ACF
@@ -894,25 +1078,25 @@ pacf(squared_residuals.order, main="PACF of Residuals of New orders")
 Box.test(residuals.order, lag = 4, type = "Ljung-Box")
 ```
 
+P value is bigger than 0.05, fail to reject null of independently distributed
+
+
+
 ```{r}
 Box.test(squared_residuals.order, lag = 4, type = "Ljung-Box")
 ```
+P value is smaller than 0.05, reject null of independently distributed
+
+
+
+
 
 ```{r}
 # Alternatively, use Jarque-Bera test for normality
 jarque_bera = jarque.bera.test(residuals.order)
 print(jarque_bera)
 ```
-
-
-```{r}
-nfore=9
-
-pred.test_var <- as.vector(predict(var.aic.model,n.ahead=9))
-s2.pred_var=pred.test_var$fcst$total.sales[,1]+total.sales.test[1:nfore]
-```
-
-
+P value is smaller than 0.05, reject null of data being normally distributed.
 
 
 
