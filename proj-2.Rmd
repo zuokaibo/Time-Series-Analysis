@@ -68,10 +68,14 @@ new.orders = as.numeric(orders)
 #astsa::lag2.plot(new.orders, total.sales, 12)
 
 ## checking correlation coefficient between two time series variables: new orders and total sales
-ccf(new.orders, total.sales, lag.max = 200)
+ccf(new.orders, total.sales, lag.max = 50)
 ```
 
 ```{r}
+
+sales = ts(data$Total.Sales, start = c(2000,1,1), frequency = 12)
+orders = ts(data$New.Orders, start = c(2000,1,1), frequency = 12)
+
 ## X-axis points converted to 0-1 scale
 sales.time.pts = c(1:length(sales))
 sales.time.pts = c(sales.time.pts - min(sales.time.pts))/max(sales.time.pts)
@@ -80,26 +84,58 @@ orders.time.pts = c(1:length(orders))
 orders.time.pts = c(orders.time.pts - min(orders.time.pts))/max(orders.time.pts)
 
 ## Splines Trend Estimation on sales
-sales.spline = gam(sales.time.pts~s(sales.time.pts))
+sales.spline = gam(sales~s(sales.time.pts))
 sales.spline.fit = ts(fitted(sales.spline),start=2000,frequency=12)
 
 ## Splines Trend Estimation on orders
-orders.spline = gam(orders.time.pts~s(orders.time.pts))
+orders.spline = gam(orders~s(orders.time.pts))
 orders.spline.fit = ts(fitted(orders.spline), start = 2000, frequency = 12)
 
 
 ## plot trends, but doesnt show up in the plot, need to fix this . 
 
 ## add trend to total sales 
-plot(sales,ylab="Total Sales")
-lines(sales.spline.fit,lwd=2,col="brown")
-abline(sales.spline.fit[1],0,lwd=2,col="blue")
+ts.plot(sales,ylab="Total Sales", main = "Total sales with Fitted Spline")
+lines(sales.spline.fit, lwd=2,col="darkred")
+#abline(sales.spline.fit[1],0,lwd=2,col="blue")
 
 ## add trend to new orders
-plot(orders,ylab="New Orders")
+ts.plot(orders,ylab="New Orders", main = "New orders with Fitted Spline")
 lines(orders.spline.fit,lwd=2,col="brown")
-abline(orders.spline.fit[1],0,lwd=2,col="blue")
+#abline(orders.spline.fit[1],0,lwd=2,col="blue")
 ```
+
+```{r}
+par(mfrow=c(1,2))
+hist(sales)
+hist(orders)
+```
+
+```{r}
+par(mfrow=c(1,2))
+hist(log(sales + 1))
+hist(log(orders + 1))
+```
+
+```{r}
+
+sales.spline.log = gam(log(sales + 1)~s(sales.time.pts))
+sales.spline.fit.log = ts(fitted(sales.spline.log),start=2000,frequency=12)
+
+ts.plot(log(sales + 1),ylab="Total Sales", main = "Total sales with Fitted Spline")
+lines(sales.spline.fit.log, lwd=2,col="darkred")
+
+
+orders.spline.log = gam(log(orders + 1)~s(orders.time.pts))
+orders.spline.fit.log = ts(fitted(orders.spline.log), start = 2000, frequency = 12)
+
+## add trend to new orders
+ts.plot(log(orders + 1),ylab="New Orders", main = "New orders with Fitted Spline")
+lines(orders.spline.fit.log,lwd=2,col="brown")
+```
+
+
+
 
 ```{r}
 ## check seasonlity on sales
