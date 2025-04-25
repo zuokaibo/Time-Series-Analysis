@@ -68,7 +68,7 @@ new.orders = as.numeric(orders)
 #astsa::lag2.plot(new.orders, total.sales, 12)
 
 ## checking correlation coefficient between two time series variables: new orders and total sales
-ccf(new.orders, total.sales)
+ccf(new.orders, total.sales, lag.max = 50)
 ```
 
 ```{r}
