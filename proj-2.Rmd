@@ -3,8 +3,8 @@ title: "Untitled"
 author: "TSA Pro-2"
 date: "2025-04-15"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -68,7 +68,7 @@ new.orders = as.numeric(orders)
 #astsa::lag2.plot(new.orders, total.sales, 12)
 
 ## checking correlation coefficient between two time series variables: new orders and total sales
-ccf(new.orders, total.sales, lag.max = 50)
+ccf(new.orders, total.sales, lag.max = 200)
 ```
 
 ```{r}
