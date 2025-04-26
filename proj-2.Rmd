@@ -255,8 +255,8 @@ Box.test(sales.resid, lag = ( 0+3+1 ), type = "Ljung-Box", fitdf = (0+3))
 ## arima evaluation on orders
 orders.resid = resid(sales.final.diff.one)
 plot(orders.resid, main = "Residual plot of New orders ( p =  5 & q = 6)")
-acf(orders.resid, lag.max = 200,  main = "Residual ACF of New orders ( p =  5 & q = 6)")
-pacf(orders.resid, lag.max = 200, main = "Residual PACF of New orders ( p =  5 & q = 6)")
+acf(orders.resid, lag.max = 200,  main = "Residual ACF of new orders ( p =  5 & q = 6)")
+pacf(orders.resid, lag.max = 200, main = "Residual PACF of new orders ( p =  5 & q = 6)")
 Box.test(orders.resid, lag = ( 5+6+1 ), type = "Ljung-Box", fitdf = (5+6))
 ```
 
@@ -729,14 +729,14 @@ summary(var.bic.model)
 
 ```{r}
 ## checked residual with order 8 choosen by aic 
-plot(ts(residuals(var.aic.model), start = 2000), main = "Residual Processes")
+plot(ts(residuals(var.aic.model), start = 2000), main = "Residual Processes of VAR model (AIC)")
 ```
 
 
 
 ```{r}
 ## checked residual with order 8 choosen by bic 
-plot(ts(residuals(var.bic.model), start = 2000), main = "Residual Processes")
+plot(ts(residuals(var.bic.model), start = 2000), main = "Residual Processes of VAR model (BIC)")
 ```
 
 Statistical test below is for aic order selection
