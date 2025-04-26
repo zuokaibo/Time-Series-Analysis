@@ -556,7 +556,7 @@ head(external.data)
 ### tried two methods to get exogen works, but failed,   
 
 
-#### method one 
+#### method one, this method works well on varx and found out exogenous 
 ```{r}
 
 external = read.csv("AISRSA.csv", header = T)
