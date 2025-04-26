@@ -569,7 +569,6 @@ colnames(external) = c("Date", "Auto.Invertory.Ratio")
 
 external.data = as.data.frame(external[85:379, ])
 
-head(external.data)
 
 new.data = as.data.frame(merge(external.data[37:105, ], newdata[24:92,], by = "Date"))
 new.data$Date = as.Date(new.data$Date, format =  "%m/%d/%Y")
@@ -592,10 +591,10 @@ train_data_varx = head(diff_data, -6)
 test_data_varx = tail(diff_data, 6)
 
 
-VARselect(train_data_varx[,-1], type = "both", lag.max = 9, exogen = train_data_varx[,1])$selection
+VARselect(train_data_varx[, -1], type = "both", lag.max = 9, exogen = train_data_varx[, 1])$selection
 
-varx.model = VAR(train_data_varx[,-1], type = "both", p = 2)
-#summary(varx.model)
+varx.model = VAR(train_data_varx[,-1], type = "both", p = 5,exogen = train_data_varx[, 1])
+summary(varx.model)
 
 
 ```
