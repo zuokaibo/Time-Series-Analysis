@@ -111,8 +111,7 @@ new.orders.plot
 
 year = format(data2$DATE, "%y")
 new.mean = aggregate(New.Orders~year, data2, mean)
-#new.mean[,1]
-#new.mean[,2]
+
 newdata = data.frame(year = new.mean[,1], year_mean = new.mean[,2])
 newdata
 
@@ -354,6 +353,9 @@ colnames(diff_ts) = c( "New orders", "Total sales")
 var.model.order = VARselect(diff_ts, lag.max = 20)
 var.model.order$selection
 ```
+```{r}
+var.log.model.order = VARselect((diff_ts), lag.max = 20)
+```
 
 
 ```{r}
@@ -532,46 +534,108 @@ sum((orders.var.pred-orders.test)^2)/sum((orders.test-mean(orders.test))^2))
 
 
 
-#### Code below is for VARX model
+#### Code below is for VARX model, import external variables from csv file: AISRSA.
+
+```{r}
+external = read.csv("AISRSA.csv", header = T)
+
+#check NA value in the new csv file 
+colSums(is.na(external))
+
+external$observation_date = as.Date(external$observation, format =  "%Y-%m-%d")
+colnames(external) = c("Date", "Auto.Invertory.Ratio")
+
+external.data = as.data.frame(external[85:379, ])
+
+head(external.data)
+
+```
+
+##### merge two dataframe into one dataframe: new.data
+
+### tried two methods to get exogen works, but failed,   
+
+
+#### method one 
 ```{r}
 
-total.sales = ts(newdata[, 2], start = c(2000, 1), freq=12)
-new.orders = ts(newdata[, 3], start = c(2000, 1), freq=12)
-datte = as.Date(newdata[ ,1], "%m%d%Y")
+external = read.csv("AISRSA.csv", header = T)
 
-ts.merge = merge(xts(total.sales, datte), xts(new.orders, datte), join = "inner")
+#check NA value in the new csv file 
+colSums(is.na(external))
 
-colnames(ts.merge) = c("total.sales", "new.orders")
+external$observation_date = as.Date(external$observation, format =  "%Y-%m-%d")
+colnames(external) = c("Date", "Auto.Invertory.Ratio")
+
+external.data = as.data.frame(external[85:379, ])
+
+head(external.data)
+
+new.data = as.data.frame(merge(external.data[37:105, ], newdata[24:92,], by = "Date"))
+new.data$Date = as.Date(new.data$Date, format =  "%m/%d/%Y")
+
+inventory.ratio = ts(new.data[ , 2], start = c(2003, 1), freq = 12)
+total.sales = ts(new.data[, 3], start = c(2003, 1), freq=12)
+new.orders = ts(new.data[, 4], start = c(2003, 1), freq=12)
+datte = as.Date(new.data[ ,1], "%m%d%Y")
+
+ts.merge = merge(xts(inventory.ratio, datte), xts(total.sales, datte), xts(new.orders, datte), join = "inner")
+
+colnames(ts.merge) = c("invertory","total.sales", "new.orders")
+
 n = dim(ts.merge)[1]
-
-head(ts.merge)
 
 diff_data = diff(ts.merge)[-1]
 
-train_data_varx = head(diff_data, -9)
-test_data_varx = tail(diff_data, 9)
 
-VARselect(train_data_varx[,-1],type = "both", lag.max = 9, exogen = train_data_varx[,1])$selection
-
-```
+train_data_varx = head(diff_data, -6)
+test_data_varx = tail(diff_data, 6)
 
 
-```{r}
-varx.model = VAR(train_data_varx, type = "both", p = 7, exogen = train_data_varx[, 1] )
+VARselect(train_data_varx[,-1], type = "both", lag.max = 9, exogen = train_data_varx[,1])$selection
+
+varx.model = VAR(train_data_varx[,-1], type = "both", p = 2)
 #summary(varx.model)
-varx.model
+
+
 ```
 
+#### method two 
 
 ```{r}
-VARselect(train_data_varx[,-2],type = "both", lag.max = 9, exogen = train_data_varx[,2])$selection
-```
+external.one = read.csv("AISRSA.csv", header = T)
 
-```{r}
-varx.model = VAR(train_data_varx, type = "both", p = 2, exogen = train_data_varx[, 2] )
+external.one$observation_date = as.Date(external.one$observation, format =  "%Y-%m-%d")
+colnames(external.one) = c("Date", "Auto.Invertory.Ratio")
+
+external.data = data.frame(external.one[85:379, ])
+
+head(external.data)
+
+new.data = as.data.frame(merge(external.data[37:105, ], newdata[24:92,], by = "Date"))
+new.data$Date = as.Date(new.data$Date, format =  "%m/%d/%Y")
+
+inventory.ratio.one = diff(new.data[,2])
+total.sales.one = diff(new.data[, 3])
+new.orders.one = diff(new.data[, 4])
+data.diff.one = data.frame(cbind(inventory.ratio.one, total.sales.one, new.orders.one))
+
+throught.diff.train = data.diff.one$inventory.ratio.one
+
+data.varx.select = VARselect(data.diff.one[,-2], type="both", exogen = data.diff.one[, 2])
+data.varx.select$selection
+
+varx.model = VAR(data.diff.one[,-2], type = "both", p = 2, exogen = data.diff.one[, 2])
 #summary(varx.model)
-varx.model
 ```
+
+
+
+
+
+
+
+
 
 
 #### I have tried VARX model with both being exogenous separately in difference varx model order selectionand VAR() with each being exoge one time, but when i tried to display the model, summary() failed, as it said the matrix is singular. so instead, i only display model without summary(), then I only coefficient of the model with each being exogenous variable one time. when new orders being exogenous variable, I got all coefficient 0 for equation new orders. I am not sure what conclusion we can have from this, does it mean new orders is exogenous variable and determined outside the model? 
@@ -744,7 +808,7 @@ pacf(resid(arima.sale.model)^2,
 Box.test(arima.sale.model$residuals, lag = (0+1+1), 
          type="Ljung-Box", fitdf = (0+1))
 ```
-P value is much smaller than 0.05, reject null of independently distributed
+P value is much bigger than 0.05, fail to reject null of independently distributed
 
 
 
@@ -832,7 +896,7 @@ acf(residuals, main="ACF of Residuals of Total sales")
 ```
 
 ```{r}
-acf(squared_residuals, main="ACF of Residuals of Total sales")
+acf(squared_residuals, main="ACF of Squared Residuals of Total sales")
 ```
 
 ```{r}
@@ -840,7 +904,7 @@ pacf(residuals, main="PACF of Residuals of Total sales")
 ```
 
 ```{r}
-pacf(squared_residuals, main="PACF of Residuals of Total sales")
+pacf(squared_residuals, main="PACF of Squared Residuals of Total sales")
 ```
 
 ```{r}
@@ -1064,13 +1128,13 @@ plot(squared_residuals.order, main="Squared Residuals of New orders", type="l")
 ```{r}
 # Autocorrelation: Check for autocorrelation in residuals using ACF
 acf(residuals.order, main="ACF of Residuals of New order")
-acf(squared_residuals.order, main="ACF of Residuals of New order")
+acf(squared_residuals.order, main="ACF of Squared Residuals of New order")
 ```
 
 
 ```{r}
 pacf(residuals.order, main="PACF of Residuals of New orders")
-pacf(squared_residuals.order, main="PACF of Residuals of New orders")
+pacf(squared_residuals.order, main="PACF of Squared Residuals of New orders")
 ```
 
 ```{r}
