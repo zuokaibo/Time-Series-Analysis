@@ -700,7 +700,7 @@ cat("\nNew Orders being exogenous VARX MAPE:",abs(mean(abs(orders.pred_varx-orde
 
 
 
-#### method two 
+#### method two (only used method one to do prediciton since it is difference)
 
 ```{r}
 external.one = read.csv("AISRSA.csv", header = T)
