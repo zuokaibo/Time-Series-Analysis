@@ -580,7 +580,7 @@ datte = as.Date(new.data[ ,1], "%m%d%Y")
 
 ts.merge = merge(xts(inventory.ratio, datte), xts(total.sales, datte), xts(new.orders, datte), join = "inner")
 
-colnames(ts.merge) = c("invertory","total.sales", "new.orders")
+colnames(ts.merge) = c("inventory","total.sales", "new.orders")
 
 n = dim(ts.merge)[1]
 
@@ -591,13 +591,114 @@ train_data_varx = head(diff_data, -6)
 test_data_varx = tail(diff_data, 6)
 
 
-VARselect(train_data_varx[, -1], type = "both", lag.max = 9, exogen = train_data_varx[, 1])$selection
+#VARselect(train_data_varx[, -1], type = "both", lag.max = 9, exogen = train_data_varx[, 1])$selection
 
-varx.model = VAR(train_data_varx[,-1], type = "both", p = 5,exogen = train_data_varx[, 1])
-summary(varx.model)
+#varx.model = VAR(train_data_varx[,-1], type = "both", p = 5,exogen = train_data_varx[, 1])
+#summary(varx.model)
 
 
 ```
+
+
+
+
+#####  new added time series "inventory" being exogenous variable. 
+```{r}
+VARselect(train_data_varx[, -1], type = "both", lag.max = 9, exogen = train_data_varx[, 1])$selection
+
+varx.model.inventory = VAR(train_data_varx[,-1], type = "both", p = 6,exogen = train_data_varx[, 1])
+summary(varx.model.inventory)
+```
+##### total.sales being exogenous variable
+```{r}
+VARselect(train_data_varx[, -2], type = "both", lag.max = 9, exogen = train_data_varx[, 2])$selection
+
+varx.model.sales = VAR(train_data_varx[,-2], type = "both", p = 2,exogen = train_data_varx[, 2])
+summary(varx.model.sales)
+```
+
+###### new orders being exogenous variable
+```{r}
+VARselect(train_data_varx[, -3], type = "both", lag.max = 9, exogen = train_data_varx[, 3])$selection
+
+varx.model.orders = VAR(train_data_varx[,-3], type = "both", p = 2,exogen = train_data_varx[, 3])
+summary(varx.model.orders)
+```
+
+
+##### prediction with varx model on inventory being exogenous variable, MAPE and PM
+```{r}
+nfore = 6
+
+inventory.pred.test_varx = as.vector(predict(varx.model.inventory,n.ahead=6, dumvar = test_data_varx[,1]))
+inventory.pred_varx = inventory.pred.test_varx$fcst$inventory[,1]+inventory.ratio[1:nfore]
+inventory.ratio.test=inventory.ratio[((length(inventory.ratio)+1)-nfore):(length(inventory.ratio))]
+```
+
+
+```{r}
+cat(
+"\n\nInventory being exogenous VARX MAPE:",abs(mean(abs(inventory.pred_varx-inventory.ratio.test)/inventory.ratio.test)),
+"\nInventory being exogenous VARX PM:",sum((inventory.pred_varx-inventory.ratio.test)^2)/sum((inventory.ratio.test-mean(inventory.ratio.test))^2))
+```
+
+
+
+
+
+##### prediction with varx model on total sales being exogenous variable, MAPE and PM
+```{r}
+sales.pred.test_varx = as.vector(predict(varx.model.sales,n.ahead=6, dumvar = test_data_varx[,2]))
+sales.pred_varx = sales.pred.test_varx$fcst$total.sales[,1]+total.sales[1:nfore]
+sales.ratio.test=total.sales[((length(total.sales)+1)-nfore):(length(total.sales))]
+```
+
+
+```{r}
+cat("\nTotal sales being exogenous VARX MAPE:",abs(mean(abs(sales.pred_varx-sales.ratio.test)/sales.ratio.test)),
+"\nTotal sales being exogenous VARX PM:",sum((sales.pred_varx-sales.ratio.test)^2)/sum((sales.ratio.test-mean(sales.ratio.test))^2))
+
+```
+
+
+
+
+##### prediction with varx model on new orders being exogenous variable, MAPE and PM
+
+```{r}
+orders.pred.test_varx = as.vector(predict(varx.model.orders, n.ahead=6, dumvar = test_data_varx[,3]))
+orders.pred_varx = orders.pred.test_varx$fcst$total.sales[,1]+new.orders[1:nfore]
+orders.ratio.test=new.orders[((length(new.orders)+1)-nfore):(length(new.orders))]
+```
+
+
+```{r}
+cat("\nNew Orders being exogenous VARX MAPE:",abs(mean(abs(orders.pred_varx-orders.ratio.test)/orders.ratio.test)),
+"\nNew Orders being exogenous VARX PM:",sum((orders.pred_varx-orders.ratio.test)^2)/sum((orders.ratio.test-mean(orders.ratio.test))^2))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #### method two 
 
